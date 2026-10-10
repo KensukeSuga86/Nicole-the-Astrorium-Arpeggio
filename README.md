@@ -1,5 +1,18 @@
 # Nicole the Astrorium for Chrome v1.1.0
 
+## iPad一画面プラネタリウム（追加モード）
+
+GitHub Pages のトップ（index.html）からアクセスすると、**iPadは ipad.html、PC/Macは従来の presenter.html** を自動で開きます。PC用Presenter/Projectorの画面・操作は変更していません。
+
+iPad版では、星空を一本指でドラッグ、二本指でピンチズーム、天体をタップして解説を表示。天体検索、時刻再生、星座絵・天の川などのレイヤー切り替え、テーマ鑑賞、星カタログ取り込みに対応します。
+
+自動判定を変更したい場合は index.html?mode=pc または index.html?mode=ipad を指定します。詳しくは [IPAD-MODE.md](./IPAD-MODE.md) を参照してください。
+
+**実機iPadOS Safari/PWAテストは未実施**です。
+
+---
+
+
 ## 起動方法（インストール・サーバー不要）
 - **Windows**: `START-Windows.bat` をダブルクリック（または `index.html` をChromeで開く）
 - **Mac**: `START-Mac.command` をダブルクリック（初回は control+クリック →「開く」）。または `index.html` をChromeで開く
