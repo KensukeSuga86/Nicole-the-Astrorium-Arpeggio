@@ -1,10 +1,10 @@
 /* Nicole the Astrorium — GitHub Pages PWA service worker */
-const CACHE = 'nicole-astrorium-v1.1.0-pages-3-ipad';
+const CACHE = 'nicole-astrorium-v1.1.0-pages-4-ipad';
 const CORE = [
   './','./index.html','./presenter.html','./projector.html','./ipad.html',
   './manifest.webmanifest','./icon-192.png','./icon-512.png','./quick-manual.html','./QUICK-MANUAL.md',
   './art-image-store.js','./media-library.js','./location-favorites.js','./db-bridge.js',
-  './database/db-bundle.js','./assets/art-data.js','./places-offline.js',
+  './database/db-bundle.js','./assets/art-data.js','./places-offline.js','./pwa-register.js',
   './ipad-app.js','./bootstrap-ipad.js',
   './database-bootstrap.js','./bootstrap-presenter.js','./bootstrap-projector.js',
   './presenter-app.js','./projector-app.js','./engine.js','./renderer-adapter.js',
@@ -14,7 +14,7 @@ self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k.startsWith('nicole-astrorium-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
