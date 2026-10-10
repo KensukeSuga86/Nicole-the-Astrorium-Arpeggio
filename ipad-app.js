@@ -1,0 +1,310 @@
+(()=>{"use strict";
+const $=id=>document.getElementById(id);
+const A=window.Astrorium,STORAGE="astrorium-ipad-mode-v1";
+if(!A||!window.AstroriumRenderer){$("skyStatus").textContent="星空エンジンを読み込めませんでした";return}
+const canvas=$("sky"),rect=()=>canvas.getBoundingClientRect();
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const norm=x=>((x%360)+360)%360;
+const two=n=>String(n).padStart(2,"0");
+const localDate=d=>[d.getFullYear(),two(d.getMonth()+1),two(d.getDate())].join("-")+"T"+two(d.getHours())+":"+two(d.getMinutes());
+const shortDate=d=>d.toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
+let s=A.makeState(),saveTimer=0,clockAnchor=performance.now(),timeAnchor=Date.now();
+try{
+ const raw=localStorage.getItem(STORAGE);
+ if(raw){const data=JSON.parse(raw);s=A.revive(data);if(!Number.isFinite(s.time.getTime()))throw Error("invalid time")}
+ else{const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);if(sunset)s.time=new Date(sunset.getTime()+45*60000)}
+}catch(e){console.warn("iPad state restore skipped",e);s=A.makeState()}
+s.running=!!s.running;
+s.rate=[1,60,600,3600].includes(Number(s.rate))?Number(s.rate):60;
+s.global.direction=false;s.global.time=false;s.global.coordinates=false;
+s.display={...s.display,starScale:1.5,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
+function anchor(){clockAnchor=performance.now();timeAnchor=s.time.getTime()}
+anchor();
+const renderer=window.AstroriumRenderer.createRenderer(canvas,A,{backend:"auto"});
+let previousSelected=null,drawTime=0,displayTime=0,scale=.75,avgMs=12,lastTune=performance.now(),nextFrame=0,toastTimer=0;
+let tourTimer=null,tourIndex=0;
+function persist(){
+ clearTimeout(saveTimer);
+ saveTimer=setTimeout(()=>{
+  try{localStorage.setItem(STORAGE,A.serial(s))}catch(e){console.warn("iPad settings not saved",e)}
+ },350);
+}
+function notice(text){
+ const el=$("notice");
+ clearTimeout(toastTimer);el.textContent=text;el.classList.add("show");
+ toastTimer=setTimeout(()=>el.classList.remove("show"),2600);
+}
+function renderClock(){
+ $("skyStatus").textContent=(s.location.name||"観測地点")+" · "+shortDate(s.time)+" · "+A.dir16(s.camera.az);
+ $("play").textContent=s.running?"Ⅱ 停止":"▶ 再生";
+ $("play").setAttribute("aria-pressed",String(s.running));
+ $("projection").setAttribute("aria-pressed",String(s.projection==="allsky"));
+ $("projection").textContent=s.projection==="allsky"?"通常":"全天";
+ $("fov").value=String(Math.round(s.camera.fov));
+ $("fovText").textContent="画角 "+Math.round(s.camera.fov)+"°";
+ if(document.activeElement!==$("dateTime"))$("dateTime").value=localDate(s.time);
+}
+function setTime(date){
+ if(!(date instanceof Date)||!Number.isFinite(date.getTime())){notice("日時を確認してください");return}
+ s.time=date;anchor();renderClock();persist();
+}
+function advance(ms){setTime(new Date(s.time.getTime()+ms))}
+function setRunning(value){s.running=!!value;anchor();renderClock();persist()}
+function cameraPatch(patch){A.command(s,{type:"camera",value:patch});renderClock();persist()}
+function changeLayer(key,on){
+ s.global[key]=on;persist();syncLayers();
+}
+const layers=[
+ ["stars","恒星"],["starNames","星の名前"],["planets","惑星"],["planetNames","惑星名"],
+ ["moon","月"],["sun","太陽"],["daylight","昼光と薄明"],["moonlight","月明かり"],
+ ["milkyWay","天の川"],["naturalDeepSky","星雲・星団"],["lines","星座線"],
+ ["names","星座名"],["arts","星座絵"],["asterisms","アステリズム"],
+ ["sporadicMeteors","散在流星"],["aurora","オーロラ"],["scintillation","瞬き"]
+];
+function buildLayers(){
+ const host=$("layerList");
+ for(const [key,label] of layers){
+  const row=document.createElement("label");row.className="toggle";
+  const span=document.createElement("span");span.textContent=label;
+  const check=document.createElement("input");check.type="checkbox";check.dataset.layer=key;
+  check.checked=!!s.global[key];
+  check.addEventListener("change",()=>changeLayer(key,check.checked));
+  row.append(span,check);host.appendChild(row);
+ }
+}
+function syncLayers(){document.querySelectorAll("[data-layer]").forEach(el=>{el.checked=!!s.global[el.dataset.layer]})}
+const sheet=$("sheet"),scrim=$("scrim");
+function chooseTab(name){
+ document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("active",el.dataset.tab===name));
+ document.querySelectorAll(".pane").forEach(el=>el.classList.toggle("active",el.dataset.pane===name));
+ if(name==="explore")setTimeout(()=>$("query").focus({preventScroll:true}),320);
+}
+function openSheet(tab="explore"){
+ chooseTab(tab);sheet.classList.add("open");scrim.classList.add("open");sheet.setAttribute("aria-hidden","false");
+}
+function closeSheet(){
+ sheet.classList.remove("open");scrim.classList.remove("open");sheet.setAttribute("aria-hidden","true");
+ if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
+}
+$("openSearch").onclick=()=>openSheet("explore");
+$("openSettings").onclick=()=>openSheet("themes");
+$("openLayers").onclick=()=>openSheet("layers");
+$("closeSheet").onclick=closeSheet;scrim.onclick=closeSheet;
+document.querySelectorAll(".tab").forEach(el=>el.onclick=()=>chooseTab(el.dataset.tab));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+$("cardClose").onclick=()=>hideCard();
+function hideCard(){$("objectCard").classList.remove("show")}
+function removeSelection(){
+ if(previousSelected){delete s.highlights[previousSelected];delete s.labels[previousSelected]}
+ previousSelected=null;
+}
+const lookup=[
+ ...A.D.constellations.map(o=>({...o,kind:"星座"})),
+ ...A.D.stars.map(o=>({...o,kind:"恒星"})),
+ ...A.D.dsos.map(o=>({...o,kind:"星雲・星団"})),
+ ...A.D.planetsInfo.map(o=>({...o,kind:"惑星"})),
+ {id:"Moon",name:"月",kind:"月"},{id:"Sun",name:"太陽",kind:"太陽"}
+];
+function findEntry(id){return lookup.find(o=>o.id===id)||A.targetById(id)}
+function showCard(obj){
+ if(!obj)return;removeSelection();
+ previousSelected=obj.id;s.highlights[obj.id]=true;s.labels[obj.id]=true;s.selected=obj.id;
+ $("objectName").textContent=obj.name||obj.display_name||obj.id;
+ $("objectMeta").textContent=(obj.kind||obj.cat||"天体")+(Number.isFinite(Number(obj.mag))&&Number(obj.mag)<30?" · 約"+Number(obj.mag).toFixed(1)+"等":"");
+ const story=obj.science||obj.highlight||obj.myth||obj.story||"星空の中で、この天体を眺めてみましょう。";
+ $("objectStory").textContent=String(story).replace(/<[^>]*>/g," ").replace(/\s+/g," ").slice(0,360);
+ $("objectCard").classList.add("show");persist();
+}
+function selectTarget(id,center=true){
+ const obj=findEntry(id);if(!obj)return;
+ if(center){
+  s.projection="perspective";
+  const result=A.centerOn(s,id);
+  if(!result.ok)notice("現在の日時では地平線の下です");
+ }
+ showCard(obj);renderClock();closeSheet();persist();
+}
+function search(text){
+ const host=$("results");host.replaceChildren();
+ const q=String(text||"").trim().toLowerCase().normalize("NFKC");
+ if(!q){const p=document.createElement("p");p.className="note";p.textContent="例：オリオン、カシオペヤ、M31、木星";host.append(p);return}
+ let n=0;
+ for(const o of lookup){
+  if(n>=45)break;
+  const name=[o.name,o.en,o.id,o.display_name,...(o.aliases||[])].filter(Boolean).join(" ").toLowerCase().normalize("NFKC");
+  if(!name.includes(q))continue;
+  const b=document.createElement("button");b.className="result";
+  b.textContent=(o.name||o.id)+"  ·  "+o.kind;
+  b.onclick=()=>selectTarget(o.id,true);host.append(b);n++;
+ }
+ if(!n){const p=document.createElement("p");p.className="note";p.textContent="見つかりませんでした。別の名前で検索してください。";host.append(p)}
+}
+$("query").addEventListener("input",()=>search($("query").value));
+function setTheme(name){
+ stopTour();
+ if(name==="tour"){startTour();closeSheet();return}
+ if(name==="tonight"||name==="constellations"||name==="milkyway"){
+  const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);
+  if(sunset)setTime(new Date(sunset.getTime()+60*60000));
+  s.global.stars=true;s.global.milkyWay=true;s.global.naturalDeepSky=true;
+  s.global.lines=name==="constellations";s.global.names=name==="constellations";s.global.arts=name==="constellations";
+  cameraPatch({az:name==="milkyway"?195:180,alt:name==="milkyway"?45:50,fov:name==="constellations"?95:115});
+  if(name==="constellations")A.centerOn(s,"Cyg");
+ }else if(name==="moon"){
+  s.global.moon=true;s.global.moonlight=true;s.global.daylight=true;
+  cameraPatch({fov:35});A.centerOn(s,"Moon");showCard(findEntry("Moon"));
+ }else if(name==="aurora"){
+  s.global.aurora=true;s.global.auroraIntensity=1.45;s.global.daylight=true;
+  const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);
+  if(sunset)setTime(new Date(sunset.getTime()+120*60000));
+  cameraPatch({az:s.location.lat>=0?0:180,alt:18,fov:110});
+  notice("オーロラは教育用の近似表現です");
+ }
+ syncLayers();renderClock();persist();closeSheet();
+}
+document.querySelectorAll("[data-theme]").forEach(el=>el.onclick=()=>setTheme(el.dataset.theme));
+const tourIds=["Ori","UMa","Cyg","Sco","Sgr","And","Cas","Tau"];
+function stopTour(){if(tourTimer){clearInterval(tourTimer);tourTimer=null}}
+function nextTour(){
+ const id=tourIds[tourIndex++%tourIds.length];
+ A.centerOn(s,id);cameraPatch({fov:83});const entry=findEntry(id);
+ if(entry)showCard(entry);
+}
+function startTour(){
+ const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);
+ if(sunset)setTime(new Date(sunset.getTime()+75*60000));
+ s.global.lines=true;s.global.arts=true;s.global.names=true;syncLayers();
+ tourIndex=0;nextTour();tourTimer=setInterval(nextTour,18000);
+ notice("星空めぐりを開始しました");
+}
+$("stepBack").onclick=()=>{stopTour();advance(-3600000)};
+$("stepNext").onclick=()=>{stopTour();advance(3600000)};
+$("play").onclick=()=>{stopTour();setRunning(!s.running)};
+$("now").onclick=()=>{stopTour();setTime(new Date());notice("現在の日時に移動しました")};
+$("tonight").onclick=()=>setTheme("tonight");
+$("projection").onclick=()=>{
+ stopTour();A.command(s,{type:"projection",value:s.projection==="allsky"?"perspective":"allsky"});
+ renderClock();persist();
+};
+$("fov").addEventListener("input",()=>{stopTour();cameraPatch({fov:Number($("fov").value)})});
+$("dateTime").addEventListener("change",()=>{stopTour();setTime(new Date($("dateTime").value))});
+$("prevDay").onclick=()=>{stopTour();advance(-86400000)};
+$("nextDay").onclick=()=>{stopTour();advance(86400000)};
+$("jumpSunset").onclick=()=>{
+ const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);
+ if(sunset)setTime(sunset);else notice("この日の日の入りは計算できません");
+};
+$("speed").value=String(s.rate);
+$("speed").onchange=()=>{
+ s.rate=Number($("speed").value)||60;anchor();persist();
+};
+function syncPlace(){
+ $("placeName").value=s.location.name||"";
+ $("lat").value=String(s.location.lat);$("lon").value=String(s.location.lon);
+}
+$("applyLocation").onclick=()=>{
+ const lat=Number($("lat").value),lon=Number($("lon").value);
+ if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||!$("lat").value||!$("lon").value){notice("緯度・経度を確認してください");return}
+ A.command(s,{type:"location",value:{name:$("placeName").value.trim()||"観測地",lat,lon}});
+ syncPlace();renderClock();persist();notice("観測地点を変更しました");
+};
+$("useGps").onclick=()=>{
+ if(!navigator.geolocation){notice("この端末では位置情報を使えません");return}
+ notice("位置情報を確認しています…");
+ navigator.geolocation.getCurrentPosition(p=>{
+  A.command(s,{type:"location",value:{name:"現在地",lat:p.coords.latitude,lon:p.coords.longitude,alt:Number(p.coords.altitude)||0}});
+  syncPlace();renderClock();persist();notice("現在地に移動しました");
+ },()=>notice("位置情報を取得できませんでした"),{enableHighAccuracy:false,timeout:12000,maximumAge:120000});
+};
+$("pickStarCatalog").onclick=()=>$("starFile").click();
+$("starFile").onchange=async()=>{
+ const file=$("starFile").files?.[0];if(!file)return;
+ $("catalogStatus").textContent="読み込み中…";
+ try{
+  const result=await A.importStarCatalogText(await file.text());
+  $("catalogStatus").textContent="追加恒星 "+result.count.toLocaleString("ja-JP")+"件を保存しました。";
+  notice("星カタログの取り込みが完了しました");
+ }catch(e){$("catalogStatus").textContent="取り込みに失敗しました："+e.message}
+ finally{$("starFile").value=""}
+};
+const pointers=new Map();let gesture=null;
+function xy(e){const box=rect();return{x:e.clientX-box.left,y:e.clientY-box.top}}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function initialGesture(){
+ const a=[...pointers.values()];
+ if(a.length===1)gesture={type:"pan",start:a[0],az:s.camera.az,alt:s.camera.alt,moved:false};
+ else if(a.length>=2)gesture={type:"pinch",dist:Math.max(10,distance(a[0],a[1])),fov:s.camera.fov,moved:true};
+ else gesture=null;
+}
+canvas.addEventListener("pointerdown",e=>{
+ if(e.pointerType==="mouse"&&e.button!==0)return;
+ e.preventDefault();stopTour();$("hint").classList.add("hidden");hideCard();
+ pointers.set(e.pointerId,xy(e));try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+ initialGesture();
+});
+canvas.addEventListener("pointermove",e=>{
+ if(!pointers.has(e.pointerId))return;e.preventDefault();
+ pointers.set(e.pointerId,xy(e));if(!gesture)return;
+ if(pointers.size>=2){
+  if(gesture.type!=="pinch")initialGesture();
+  const a=[...pointers.values()],ratio=distance(a[0],a[1])/gesture.dist;
+  cameraPatch({fov:clamp(gesture.fov/Math.max(.2,ratio),20,150)});
+ }else if(gesture.type==="pan"){
+  const p=[...pointers.values()][0],dx=p.x-gesture.start.x,dy=p.y-gesture.start.y;
+  if(Math.hypot(dx,dy)>8)gesture.moved=true;
+  if(!gesture.moved)return;
+  const box=rect(),span=s.camera.fov;
+  cameraPatch({az:norm(gesture.az-dx/Math.max(1,box.width)*span),alt:clamp(gesture.alt+dy/Math.max(1,box.height)*span*.65,-20,90)});
+ }
+});
+function pick(p){
+ const box=rect(),w=Math.max(1,canvas.width),h=Math.max(1,canvas.height),x=p.x/box.width*w,y=p.y/box.height*h;
+ const threshold=Math.max(24,w/box.width*28);let best=null,dist=threshold;
+ const candidates=[...lookup,...A.onlineStars().filter(st=>st.mag<=4).slice(0,700)];
+ for(const o of candidates){
+  const c=A.targetPosition(o.id,s.time)||o;
+  const q=A.point(c,s,w,h);
+  if(!q||q.x<0||q.x>w||q.y<0||q.y>h)continue;
+  const d=Math.hypot(q.x-x,q.y-y);
+  if(d<dist){best=o;dist=d}
+ }
+ if(best){const obj=findEntry(best.id)||best;showCard(obj)}
+ else hideCard();
+}
+function endPointer(e,cancelled=false){
+ if(!pointers.has(e.pointerId))return;
+ const last=pointers.get(e.pointerId);
+ const tap=!cancelled&&pointers.size===1&&gesture?.type==="pan"&&!gesture.moved&&distance(last,gesture.start)<12;
+ pointers.delete(e.pointerId);initialGesture();
+ if(tap)pick(last);
+}
+canvas.addEventListener("pointerup",e=>endPointer(e));
+canvas.addEventListener("pointercancel",e=>endPointer(e,true));
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+document.addEventListener("visibilitychange",()=>{if(document.hidden){stopTour();persist()}else anchor()});
+window.addEventListener("pagehide",()=>{stopTour();try{localStorage.setItem(STORAGE,A.serial(s))}catch(_){}});
+function loop(t){
+ if(s.running)s.time=new Date(timeAnchor+(t-clockAnchor)*s.rate);
+ if(t>=nextFrame){
+  const cost=renderer.render(s,{dprScale:scale,projector:true});
+  avgMs=avgMs*.91+cost*.09;
+  if(t-lastTune>1500){
+   if(avgMs>26)scale=clamp(scale-.08,.52,.88);
+   else if(avgMs<13)scale=clamp(scale+.035,.52,.88);
+   lastTune=t;
+  }
+  nextFrame=t+(avgMs>26?1000/24:1000/30);
+ }
+ if(t-displayTime>900){renderClock();displayTime=t}
+ requestAnimationFrame(loop);
+}
+buildLayers();syncLayers();syncPlace();renderClock();search("");
+Promise.resolve(A.loadLines()).catch(console.warn);
+Promise.resolve(A.loadMilkyWay()).catch(console.warn);
+Promise.resolve(A.loadOnlineStars()).then(info=>{
+ $("catalogStatus").textContent=info.count?"追加恒星 "+info.count.toLocaleString("ja-JP")+"件を読み込みました。":"追加の約8等星カタログは未登録です。必要ならJSONを取り込んでください。";
+}).catch(()=>{$("catalogStatus").textContent="追加の星カタログは未登録です。"});
+window.AstroriumArtImageStore?.applyAll(A).catch(console.warn);
+window.AstroriumIPadDiagnostics={version:"1.0.0",state:()=>JSON.parse(A.serial(s)),renderer:()=>renderer.diagnostics()};
+requestAnimationFrame(loop);
+})();
