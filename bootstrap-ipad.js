@@ -1,0 +1,1 @@
+bootAstrorium("./ipad-app.js");
