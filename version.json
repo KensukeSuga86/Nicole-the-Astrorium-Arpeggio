@@ -21,6 +21,9 @@
     "allSkyLabelOrientation": "radial-down-v1",
     "descriptionEditor": "external-authoritative-editor-v1",
     "descriptionOwnership": "nicole-astronomy-database-editor-only-v1",
-    "zodiac12MasterToggle": "constellation-name-line-art-v1"
+    "zodiac12MasterToggle": "constellation-name-line-art-v1",
+    "ipadSingleScreen": "touch-planetarium-v1",
+    "ipadDeviceRouting": "automatic-index-v1",
+    "ipadUserState": "localstorage-v1"
   }
 }
