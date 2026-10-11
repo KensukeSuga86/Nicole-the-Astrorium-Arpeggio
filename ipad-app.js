@@ -17,6 +17,8 @@ try{
 s.running=!!s.running;
 s.rate=[1,60,600,3600].includes(Number(s.rate))?Number(s.rate):60;
 s.global.direction=false;s.global.time=false;s.global.coordinates=false;
+// Remove legacy selection labels/highlights on constellations; layer visibility now owns their names.
+for(const c of A.D.constellations){delete s.highlights[c.id];delete s.labels[c.id]}
 s.display={...s.display,starScale:1.5,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
 function anchor(){clockAnchor=performance.now();timeAnchor=s.time.getTime()}
 anchor();
@@ -46,7 +48,7 @@ function renderClock(){
 }
 function setTime(date){
  if(!(date instanceof Date)||!Number.isFinite(date.getTime())){notice("日時を確認してください");return}
- s.time=date;anchor();renderClock();persist();
+ s.time=date;anchor();renderClock();refreshConstellationPicker();persist();
 }
 function advance(ms){setTime(new Date(s.time.getTime()+ms))}
 function setRunning(value){s.running=!!value;anchor();renderClock();persist()}
@@ -122,6 +124,26 @@ function removeSelection(){
  if(previousSelected){delete s.highlights[previousSelected];delete s.labels[previousSelected]}
  previousSelected=null;
 }
+function aboveHorizon(obj){
+ const p=A.targetPosition(obj.id,s.time)||obj;
+ if(!Number.isFinite(Number(p?.ra))||!Number.isFinite(Number(p?.dec)))return false;
+ return A.altaz(Number(p.ra),Number(p.dec),s.time,s.location.lat,s.location.lon).alt>=0;
+}
+function refreshConstellationPicker(){
+ const select=$("portraitConstellationSelect"),old=select.value||activeConstellationId;
+ const all=[...A.D.constellations].sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id,"ja"));
+ select.replaceChildren();
+ for(const [label,showAbove] of [["今、地平線の上にある星座",true],["地平線の下にある星座",false]]){
+  const group=document.createElement("optgroup");group.label=label;
+  for(const obj of all.filter(c=>aboveHorizon(c)===showAbove)){
+   const option=document.createElement("option");option.value=obj.id;
+   option.textContent=obj.name||obj.id;group.append(option);
+  }
+  if(group.children.length)select.append(group);
+ }
+ select.value=old;
+ if(!select.value&&all.length)select.value=all[0].id;
+}
 const lookup=[
  ...A.D.constellations.map(o=>({...o,kind:"星座"})),
  ...A.D.stars.map(o=>({...o,kind:"恒星"})),
@@ -179,26 +201,26 @@ function jumpToRelatedConstellation(){
 $("objectConstellationJump").onclick=jumpToRelatedConstellation;
 $("portraitConstellationJump").onclick=jumpToRelatedConstellation;
 function initConstellationPicker(){
+ activeConstellationId=A.D.constellations.find(c=>c.id==="Ori")?.id||A.D.constellations[0]?.id||null;
+ refreshConstellationPicker();
  const select=$("portraitConstellationSelect");
- const rows=[...A.D.constellations].sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id,"ja"));
- for(const obj of rows){
-  const option=document.createElement("option");option.value=obj.id;
-  option.textContent=obj.name||obj.id;select.append(option);
- }
- activeConstellationId=rows.find(c=>c.id==="Ori")?.id||rows[0]?.id||null;
  select.value=activeConstellationId||"";
- select.onchange=()=>{selectTarget(select.value,false);choosePortraitTab("constellations")};
+ select.onchange=()=>{selectTarget(select.value,true);choosePortraitTab("constellations")};
  $("portraitCenterConstellation").onclick=()=>{
   if(!activeConstellationId)return;
   selectTarget(activeConstellationId,true);choosePortraitTab("constellations");
  };
  syncConstellationControls();
 }
+
 function showCard(obj){
  if(!obj)return;
  removeSelection();
- previousSelected=obj.id;s.highlights[obj.id]=true;s.labels[obj.id]=true;s.selected=obj.id;
  const isConstellation=obj.kind==="星座"||A.D.constellations.some(c=>c.id===obj.id);
+ previousSelected=obj.id;
+ // Constellations already have separately controlled names and artwork: no extra ring or label.
+ if(!isConstellation){s.highlights[obj.id]=true;s.labels[obj.id]=true}
+ s.selected=obj.id;
  if(isConstellation)activeConstellationId=obj.id;
  relatedConstellationId=isConstellation?null:relatedConstellation(obj);
  const name=obj.name||obj.display_name||obj.id;
@@ -237,12 +259,13 @@ function search(text){
  const q=String(text||"").trim().toLowerCase().normalize("NFKC");
  if(!q){const p=document.createElement("p");p.className="note";p.textContent="例：オリオン、カシオペヤ、M31、木星";host.append(p);return}
  let n=0;
- for(const o of lookup){
+ const ordered=[...lookup].sort((a,b)=>Number(aboveHorizon(b))-Number(aboveHorizon(a)));
+ for(const o of ordered){
   if(n>=45)break;
   const name=[o.name,o.en,o.id,o.display_name,...(o.aliases||[])].filter(Boolean).join(" ").toLowerCase().normalize("NFKC");
   if(!name.includes(q))continue;
   const b=document.createElement("button");b.className="result";
-  b.textContent=(o.name||o.id)+"  ·  "+o.kind;
+  b.textContent=(o.name||o.id)+"  ·  "+o.kind+"  ·  "+(aboveHorizon(o)?"地平線の上":"地平線の下");
   b.onclick=()=>selectTarget(o.id,true);host.append(b);n++;
  }
  if(!n){const p=document.createElement("p");p.className="note";p.textContent="見つかりませんでした。別の名前で検索してください。";host.append(p)}
@@ -314,14 +337,14 @@ $("applyLocation").onclick=()=>{
  const lat=Number($("lat").value),lon=Number($("lon").value);
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||!$("lat").value||!$("lon").value){notice("緯度・経度を確認してください");return}
  A.command(s,{type:"location",value:{name:$("placeName").value.trim()||"観測地",lat,lon}});
- syncPlace();renderClock();persist();notice("観測地点を変更しました");
+ syncPlace();renderClock();refreshConstellationPicker();persist();notice("観測地点を変更しました");
 };
 $("useGps").onclick=()=>{
  if(!navigator.geolocation){notice("この端末では位置情報を使えません");return}
  notice("位置情報を確認しています…");
  navigator.geolocation.getCurrentPosition(p=>{
   A.command(s,{type:"location",value:{name:"現在地",lat:p.coords.latitude,lon:p.coords.longitude,alt:Number(p.coords.altitude)||0}});
-  syncPlace();renderClock();persist();notice("現在地に移動しました");
+  syncPlace();renderClock();refreshConstellationPicker();persist();notice("現在地に移動しました");
  },()=>notice("位置情報を取得できませんでした"),{enableHighAccuracy:false,timeout:12000,maximumAge:120000});
 };
 $("pickStarCatalog").onclick=()=>$("starFile").click();
