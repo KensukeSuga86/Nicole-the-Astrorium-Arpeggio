@@ -1,0 +1,26 @@
+{
+  "id": "./ipad.html",
+  "name": "Nicole the Astrorium Arpeggio — iPad",
+  "short_name": "Arpeggio",
+  "description": "Nicole the Astrorium Arpeggio iPad planetarium",
+  "start_url": "./ipad.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#020817",
+  "theme_color": "#061a44",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
