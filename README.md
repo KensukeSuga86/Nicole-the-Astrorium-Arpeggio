@@ -1,4 +1,6 @@
-# Nicole the Astrorium for Chrome v1.1.0
+# Nicole the Astrorium Arpeggio v1.1.0
+
+旧称：Nicole the Astrorium for Chrome。PC用のオフラインPresenter/ProjectorとiPad用の一画面モードを備えています。
 
 ## iPad一画面プラネタリウム（追加モード）
 
