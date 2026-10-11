@@ -91,3 +91,12 @@ iPad版では「データ」タブからPC版へ切り替え可能。PC版では
 - 星座線用座標の元データ：Hipparcos Planetarium Data Creator（https://github.com/creativival/hipparcos_planetarium_data_creator, generated HIP line-star CSV; Hipparcos/Bright Star catalogs）。
 
 ※動作確認はコード構文・星座線IDの照合・HTML要素の整合確認まで。iPadOS Safariの実機描画とPWA更新は実機検証が必要。
+
+
+## 2026-10-12 下部コンソールへのUI統合
+
+- iPad版は縦向き・横向きとも、画面下部の常設コンソールに通常操作をまとめる。
+- 「案内」「星座」「表示」「検索」「日時・場所」「データ」の6タブを利用する。右から出るメニューは日常操作では不要。
+- テーマモードのタブ・テーマ一覧を撤去。時間操作の「今夜」ボタンは、任意の観望時刻に移動する基本操作として維持。
+- 星の大きさの設定範囲を 1–12 へ拡張。明るさ・光条の設定は維持。縦・横の星設定スライダーは同じ値に同期する。
+- PC Presenter / Projectorは変更なし。

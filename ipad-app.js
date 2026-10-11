@@ -20,7 +20,7 @@ s.global.direction=false;s.global.time=false;s.global.coordinates=false;
 // Remove legacy selection labels/highlights on constellations; layer visibility now owns their names.
 for(const c of A.D.constellations){delete s.highlights[c.id];delete s.labels[c.id]}
 if(!s.display?.ipadStarAppearanceV1)s.display={...s.display,starScale:2.3,starBrightness:1.25,starSpikes:true,ipadStarAppearanceV1:true};
-s.display={...s.display,starScale:Math.max(1,Math.min(5,Number(s.display.starScale)||2.3)),starBrightness:Math.max(.4,Math.min(4,Number(s.display.starBrightness)||1.25)),starSpikes:s.display.starSpikes!==false,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
+s.display={...s.display,starScale:Math.max(1,Math.min(12,Number(s.display.starScale)||2.3)),starBrightness:Math.max(.4,Math.min(4,Number(s.display.starBrightness)||1.25)),starSpikes:s.display.starSpikes!==false,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
 function anchor(){clockAnchor=performance.now();timeAnchor=s.time.getTime()}
 anchor();
 const renderer=window.AstroriumRenderer.createRenderer(canvas,A,{backend:"auto"});
@@ -76,7 +76,7 @@ function buildLayers(){
  }
 }
 function setupStarAppearance(){
- const settings=[["starSize","starScale",1,5,1],["starBrightness","starBrightness",.4,4,2]];
+ const settings=[["starSize","starScale",1,12,1],["starBrightness","starBrightness",.4,4,2]];
  const sync=()=>{
   for(const [id,key,,,decimals] of settings)for(const suffix of ["","Landscape"]){
    $(id+suffix).value=String(s.display[key]);
@@ -113,7 +113,7 @@ const sheet=$("sheet"),scrim=$("scrim");
 function chooseTab(name){
  document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("active",el.dataset.tab===name));
  document.querySelectorAll(".pane").forEach(el=>el.classList.toggle("active",el.dataset.pane===name));
- if(name==="explore")setTimeout(()=>$("query").focus({preventScroll:true}),320);
+ if(name==="explore" && sheet.classList.contains("open"))setTimeout(()=>$("query").focus({preventScroll:true}),320);
 }
 function openSheet(tab="explore"){
  chooseTab(tab);sheet.classList.add("open");scrim.classList.add("open");sheet.setAttribute("aria-hidden","false");
@@ -122,16 +122,25 @@ function closeSheet(){
  sheet.classList.remove("open");scrim.classList.remove("open");sheet.setAttribute("aria-hidden","true");
  if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
 }
-$("openSearch").onclick=()=>openSheet("explore");
-$("openSettings").onclick=()=>openSheet("themes");
-$("openLayers").onclick=()=>openSheet("layers");
+$("openSearch").onclick=()=>choosePortraitTab("explore");
+$("openSettings").onclick=()=>choosePortraitTab("layers");
+$("openLayers").onclick=()=>choosePortraitTab("layers");
 $("closeSheet").onclick=closeSheet;scrim.onclick=closeSheet;
 document.querySelectorAll(".tab").forEach(el=>el.onclick=()=>chooseTab(el.dataset.tab));
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 $("cardClose").onclick=()=>hideCard();
 function hideCard(){$("objectCard").classList.remove("show")}
 
+// Use the persistent bottom console for all routine iPad operations.
+function installBottomConsole(){
+ for(const name of ["explore","time","data"]){
+  const source=document.querySelector('[data-pane="'+name+'"]');
+  const target=document.querySelector('[data-portrait-page="'+name+'"]');
+  if(source&&target){source.classList.add("active");target.append(source)}
+ }
+}
 function choosePortraitTab(name){
+ closeSheet();
  document.querySelectorAll("[data-portrait-tab]").forEach(el=>{
   const active=el.dataset.portraitTab===name;
   el.classList.toggle("active",active);el.setAttribute("aria-pressed",String(active));
@@ -139,7 +148,7 @@ function choosePortraitTab(name){
  document.querySelectorAll("[data-portrait-page]").forEach(el=>el.classList.toggle("active",el.dataset.portraitPage===name));
 }
 document.querySelectorAll("[data-portrait-tab]").forEach(el=>el.onclick=()=>choosePortraitTab(el.dataset.portraitTab));
-$("portraitOpenSearch").onclick=()=>openSheet("explore");
+$("portraitOpenSearch").onclick=()=>choosePortraitTab("explore");
 function removeSelection(){
  if(previousSelected){delete s.highlights[previousSelected];delete s.labels[previousSelected]}
  previousSelected=null;
@@ -320,7 +329,7 @@ function setTheme(name){
  }
  syncLayers();renderClock();persist();closeSheet();
 }
-document.querySelectorAll("[data-theme]").forEach(el=>el.onclick=()=>setTheme(el.dataset.theme));
+// Theme presets removed from iPad UI; the direct “今夜” shortcut remains.
 const tourIds=["Ori","UMa","Cyg","Sco","Sgr","And","Cas","Tau"];
 function stopTour(){if(tourTimer){clearInterval(tourTimer);tourTimer=null}}
 function nextTour(){
@@ -497,7 +506,7 @@ function loop(t){
  if(t-displayTime>900){renderClock();displayTime=t}
  requestAnimationFrame(loop);
 }
-buildLayers();buildPortraitLayers();setupStarAppearance();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
+installBottomConsole();buildLayers();buildPortraitLayers();setupStarAppearance();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
 Promise.resolve(A.loadLines()).then(info=>{
  let total=0,ready=0;
  for(const c of A.D.constellations)for(const [a,b] of A.constellationSegments(c.abbr,s)){
