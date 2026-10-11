@@ -152,7 +152,17 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
    <button class="constellationToggle" data-const-toggle="name" aria-pressed="false">星座名</button>
   </div>
  </div>
- <div class="pPage" data-portrait-page="layers"><div class="pLayers" id="portraitLayerList"></div></div>
+ <div class="pPage" data-portrait-page="layers">
+  <div class="section">星の見え方</div>
+  <label for="starSize">星の大きさ <output id="starSizeValue">2.3</output></label>
+  <input class="field" style="width:100%" type="range" id="starSize" min="1" max="5" step=".1" value="2.3">
+  <label for="starBrightness">星の明るさ <output id="starBrightnessValue">1.25</output></label>
+  <input class="field" style="width:100%" type="range" id="starBrightness" min=".4" max="2.5" step=".05" value="1.25">
+  <label class="pLayer"><input type="checkbox" id="starSpikes" checked><span>明るい星の光条（1等星以上）</span></label>
+  <p class="note">iPad版だけの表示設定です。光条は視認性を高める演出で、肉眼の星の姿を厳密に再現するものではありません。</p>
+  <div class="section">表示するもの</div>
+  <div class="pLayers" id="portraitLayerList"></div>
+ </div>
 </section>
 <footer class="chrome" id="footer"><div class="glass controls">
 <button class="control" id="stepBack" aria-label="1時間戻す">−1h</button>
