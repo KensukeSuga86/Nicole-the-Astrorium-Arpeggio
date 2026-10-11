@@ -214,7 +214,12 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   <input type="file" id="starFile" accept=".json,application/json" hidden>
   <p class="note" id="catalogStatus">星カタログの状態を確認しています…</p>
   <div class="section">表示モード</div>
-  <a href="./presenter.html" style="color:#ffe0a2">PC用Presenterを開く</a>
+  <div class="section">画面の切り替え</div>
+  <div class="grid2">
+    <a class="tile" style="color:#ffe0a2;text-decoration:none;display:flex;align-items:center;justify-content:center;" href="./index.html?mode=desktop">PC版を開く</a>
+    <a class="tile" style="color:#c1d7ec;text-decoration:none;display:flex;align-items:center;justify-content:center;" href="./index.html?mode=auto">端末の自動判定に戻す</a>
+  </div>
+  <p class="note">PC版・iPad版の選択は、この端末に記憶されます。</p>
  </section>
 </aside>
 <div id="notice" role="status" aria-live="polite"></div>
