@@ -106,6 +106,25 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   #portraitConsole .pLayers{grid-template-columns:repeat(2,minmax(0,1fr))}
   #portraitConsole{padding-bottom:calc(69px + var(--safe-bottom))}
 }
+
+/* Arpeggio iPad unified bottom console: no right-side menu for ordinary controls. */
+#sky{height:64dvh}
+#veil{height:64dvh;bottom:auto}
+#portraitConsole{display:flex;position:fixed;z-index:6;left:0;right:0;top:64dvh;bottom:0;flex-direction:column;background:#0b1729;border-top:1px solid rgba(181,208,239,.3);padding:8px max(12px,env(safe-area-inset-right,0px)) calc(70px + var(--safe-bottom)) max(12px,env(safe-area-inset-left,0px))}
+#portraitConsole .pTabs{overflow-x:auto;scrollbar-width:none;max-width:100%;flex-wrap:nowrap}
+#portraitConsole .pTab{flex:none;padding:8px 12px;white-space:nowrap}
+#portraitConsole .pHead{min-height:48px}
+#portraitConsole .pPage{padding:3px 6px 12px;overflow-y:auto}
+#portraitConsole .pPage .pane{display:block;overflow:visible;padding:2px 4px 16px}
+#portraitConsole .pPage input.field,#portraitConsole .pPage select.field{max-width:100%}
+#footer{z-index:7;bottom:0;background:#0b1729;justify-content:center;padding:5px max(8px,env(safe-area-inset-right,0px)) calc(5px + var(--safe-bottom)) max(8px,env(safe-area-inset-left,0px))}
+#footer .controls{padding:3px}
+#objectCard{display:none!important}
+#notice{bottom:calc(36dvh + 10px)}
+#openSearch,#openSettings{display:none}
+#portraitOpenSearch{display:none}
+@media (orientation:portrait){#sky,#veil{height:66.666667dvh}#portraitConsole{top:66.666667dvh}#notice{bottom:calc(33.333333dvh + 12px)}}
+@media (orientation:landscape){#portraitConsole .pLayers{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -130,6 +149,9 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   <button class="pTab active" data-portrait-tab="guide" aria-pressed="true">案内</button>
   <button class="pTab" data-portrait-tab="constellations" aria-pressed="false">星座</button>
   <button class="pTab" data-portrait-tab="layers" aria-pressed="false">表示</button>
+  <button class="pTab" data-portrait-tab="explore" aria-pressed="false">検索</button>
+  <button class="pTab" data-portrait-tab="time" aria-pressed="false">日時・場所</button>
+  <button class="pTab" data-portrait-tab="data" aria-pressed="false">データ</button>
  </nav><button class="pTab" id="portraitOpenSearch">⌕ 探す</button></div>
  <div class="pPage active" data-portrait-page="guide">
   <h3 id="portraitName">星空の案内</h3>
@@ -152,10 +174,13 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
    <button class="constellationToggle" data-const-toggle="name" aria-pressed="false">星座名</button>
   </div>
  </div>
+ <div class="pPage" data-portrait-page="explore"></div>
+ <div class="pPage" data-portrait-page="time"></div>
+ <div class="pPage" data-portrait-page="data"></div>
  <div class="pPage" data-portrait-page="layers">
   <div class="section">星の見え方</div>
   <label for="starSize">星の大きさ <output id="starSizeValue">2.3</output></label>
-  <input class="field" style="width:100%" type="range" id="starSize" min="1" max="5" step=".1" value="2.3">
+  <input class="field" style="width:100%" type="range" id="starSize" min="1" max="12" step=".1" value="2.3">
   <label for="starBrightness">星の明るさ <output id="starBrightnessValue">1.25</output></label>
   <input class="field" style="width:100%" type="range" id="starBrightness" min=".4" max="4" step=".05" value="1.25">
   <label class="pLayer"><input type="checkbox" id="starSpikes" checked><span>明るい星の光条（1等星以上）</span></label>
@@ -178,7 +203,7 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
  <div class="sheet-header"><h2>星空を楽しむ</h2><button id="closeSheet" aria-label="閉じる">×</button></div>
  <div class="tabs">
   <button class="tab active" data-tab="explore">天体を探す</button>
-  <button class="tab" data-tab="themes">テーマ</button>
+  
   <button class="tab" data-tab="layers">表示</button>
   <button class="tab" data-tab="time">日時・場所</button>
   <button class="tab" data-tab="data">データ</button>
@@ -194,22 +219,10 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   <div id="results"></div>
   <p class="note" id="lineStatus" role="status">星座線データを確認中…</p>
  </section>
- <section class="pane" data-pane="themes">
-  <p class="note">見たいテーマを選択すると、日時・視点・表示レイヤーを組み合わせて切り替えます。</p>
-  <div class="grid2">
-   <button class="tile" data-theme="tonight">✦ 今夜の星空</button>
-   <button class="tile" data-theme="constellations">✧ 星座絵を楽しむ</button>
-   <button class="tile" data-theme="milkyway">☄ 天の川</button>
-   <button class="tile" data-theme="moon">☾ 月を眺める</button>
-   <button class="tile" data-theme="aurora">◈ オーロラ</button>
-   <button class="tile" data-theme="tour">▶ 星空めぐり</button>
-  </div>
-  <p class="note">「星空めぐり」は約18秒ごとに注目の星座へ移動します。いつでも手動操作で止められます。</p>
- </section>
  <section class="pane" data-pane="layers">
   <div class="section">星の見え方</div>
   <label for="starSizeLandscape">星の大きさ <output id="starSizeLandscapeValue">2.3</output></label>
-  <input class="field" style="width:100%" type="range" id="starSizeLandscape" min="1" max="5" step=".1" value="2.3">
+  <input class="field" style="width:100%" type="range" id="starSizeLandscape" min="1" max="12" step=".1" value="2.3">
   <label for="starBrightnessLandscape">星の明るさ <output id="starBrightnessLandscapeValue">1.25</output></label>
   <input class="field" style="width:100%" type="range" id="starBrightnessLandscape" min=".4" max="4" step=".05" value="1.25">
   <label class="pLayer" style="display:flex;gap:10px;align-items:center;margin:12px 0"><input type="checkbox" id="starSpikesLandscape" checked><span>明るい星の光条</span></label>
