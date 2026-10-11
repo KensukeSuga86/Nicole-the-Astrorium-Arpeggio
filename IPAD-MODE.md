@@ -1,6 +1,6 @@
 # iPad 一画面プラネタリウムモード
 
-Nicole the Astrorium for Chrome v1.1.0 の星空エンジンをそのまま利用する、iPad向け一画面UIです。
+Nicole the Astrorium Arpeggio v1.1.0 の星空エンジンをそのまま利用する、iPad向け一画面UIです。
 
 ## 起動と自動振り分け
 
