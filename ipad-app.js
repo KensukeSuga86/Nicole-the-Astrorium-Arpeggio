@@ -72,7 +72,21 @@ function buildLayers(){
   row.append(span,check);host.appendChild(row);
  }
 }
-function syncLayers(){document.querySelectorAll("[data-layer]").forEach(el=>{el.checked=!!s.global[el.dataset.layer]})}
+function buildPortraitLayers(){
+ const host=$("portraitLayerList");
+ if(!host)return;
+ for(const [key,label] of layers){
+  const row=document.createElement("label");row.className="pLayer";
+  const input=document.createElement("input");input.type="checkbox";input.dataset.portraitLayer=key;
+  input.checked=!!s.global[key];input.onchange=()=>changeLayer(key,input.checked);
+  const text=document.createElement("span");text.textContent=label;
+  row.append(input,text);host.appendChild(row);
+ }
+}
+function syncLayers(){
+ document.querySelectorAll("[data-layer]").forEach(el=>{el.checked=!!s.global[el.dataset.layer]});
+ document.querySelectorAll("[data-portrait-layer]").forEach(el=>{el.checked=!!s.global[el.dataset.portraitLayer]});
+}
 const sheet=$("sheet"),scrim=$("scrim");
 function chooseTab(name){
  document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("active",el.dataset.tab===name));
@@ -94,6 +108,16 @@ document.querySelectorAll(".tab").forEach(el=>el.onclick=()=>chooseTab(el.datase
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 $("cardClose").onclick=()=>hideCard();
 function hideCard(){$("objectCard").classList.remove("show")}
+
+function choosePortraitTab(name){
+ document.querySelectorAll("[data-portrait-tab]").forEach(el=>{
+  const active=el.dataset.portraitTab===name;
+  el.classList.toggle("active",active);el.setAttribute("aria-pressed",String(active));
+ });
+ document.querySelectorAll("[data-portrait-page]").forEach(el=>el.classList.toggle("active",el.dataset.portraitPage===name));
+}
+document.querySelectorAll("[data-portrait-tab]").forEach(el=>el.onclick=()=>choosePortraitTab(el.dataset.portraitTab));
+$("portraitOpenSearch").onclick=()=>openSheet("explore");
 function removeSelection(){
  if(previousSelected){delete s.highlights[previousSelected];delete s.labels[previousSelected]}
  previousSelected=null;
@@ -106,13 +130,97 @@ const lookup=[
  {id:"Moon",name:"月",kind:"月"},{id:"Sun",name:"太陽",kind:"太陽"}
 ];
 function findEntry(id){return lookup.find(o=>o.id===id)||A.targetById(id)}
+let activeConstellationId=null,relatedConstellationId=null;
+const constToggleLabels={line:"星座線",art:"星座絵",name:"星座名"};
+function cleanGuideText(value){
+ return String(value??"").replace(/<[^>]*>/g," ").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/\s+/g," ").trim();
+}
+function relatedConstellation(obj){
+ const id=obj?.constellation||obj?.constellation_id;
+ return A.D.constellations.some(c=>c.id===id)?id:null;
+}
+function guideStory(obj){
+ if(obj.kind==="星座"){
+  const sections=[];
+  if(obj.science)sections.push("【星座について】\n"+cleanGuideText(obj.science));
+  if(obj.myth)sections.push("【神話・由来】\n"+cleanGuideText(obj.myth));
+  if(!sections.length&&obj.story)sections.push(cleanGuideText(obj.story));
+  return sections.join("\n\n")||"この星座の星座線・星座絵・星座名を個別に切り替えて、夜空の位置を確かめてみましょう。";
+ }
+ return cleanGuideText(obj.story||obj.science||obj.highlight||obj.myth)||
+ "夜空の中で見つけた天体です。検索から別の天体を探すこともできます。";
+}
+function syncConstellationControls(){
+ const id=activeConstellationId;
+ const isGuideConstellation=s.selected===id&&!!id;
+ ["constellationCardActions","portraitGuideActions"].forEach(k=>{$(k).hidden=!isGuideConstellation});
+ $("portraitConstellationActions").hidden=!id;
+ document.querySelectorAll("[data-const-toggle]").forEach(button=>{
+  const key=button.dataset.constToggle;
+  const enabled=!!(id&&A.effectiveConst(s,id,key));
+  button.setAttribute("aria-pressed",String(enabled));
+  button.textContent=constToggleLabels[key]+" "+(enabled?"ON":"OFF");
+  button.disabled=!id;
+ });
+ if(id)$("portraitConstellationSelect").value=id;
+}
+function toggleIndividualConstellation(key){
+ if(!activeConstellationId||!constToggleLabels[key])return;
+ const enabled=A.effectiveConst(s,activeConstellationId,key);
+ A.command(s,{type:"const",id:activeConstellationId,key,value:!enabled});
+ syncConstellationControls();persist();
+}
+document.querySelectorAll("[data-const-toggle]").forEach(button=>{
+ button.onclick=()=>toggleIndividualConstellation(button.dataset.constToggle);
+});
+function jumpToRelatedConstellation(){
+ if(relatedConstellationId)selectTarget(relatedConstellationId,true);
+}
+$("objectConstellationJump").onclick=jumpToRelatedConstellation;
+$("portraitConstellationJump").onclick=jumpToRelatedConstellation;
+function initConstellationPicker(){
+ const select=$("portraitConstellationSelect");
+ const rows=[...A.D.constellations].sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id,"ja"));
+ for(const obj of rows){
+  const option=document.createElement("option");option.value=obj.id;
+  option.textContent=obj.name||obj.id;select.append(option);
+ }
+ activeConstellationId=rows.find(c=>c.id==="Ori")?.id||rows[0]?.id||null;
+ select.value=activeConstellationId||"";
+ select.onchange=()=>{selectTarget(select.value,false);choosePortraitTab("constellations")};
+ $("portraitCenterConstellation").onclick=()=>{
+  if(!activeConstellationId)return;
+  selectTarget(activeConstellationId,true);choosePortraitTab("constellations");
+ };
+ syncConstellationControls();
+}
 function showCard(obj){
- if(!obj)return;removeSelection();
+ if(!obj)return;
+ removeSelection();
  previousSelected=obj.id;s.highlights[obj.id]=true;s.labels[obj.id]=true;s.selected=obj.id;
- $("objectName").textContent=obj.name||obj.display_name||obj.id;
- $("objectMeta").textContent=(obj.kind||obj.cat||"天体")+(Number.isFinite(Number(obj.mag))&&Number(obj.mag)<30?" · 約"+Number(obj.mag).toFixed(1)+"等":"");
- const story=obj.science||obj.highlight||obj.myth||obj.story||"星空の中で、この天体を眺めてみましょう。";
- $("objectStory").textContent=String(story).replace(/<[^>]*>/g," ").replace(/\s+/g," ").slice(0,360);
+ const isConstellation=obj.kind==="星座"||A.D.constellations.some(c=>c.id===obj.id);
+ if(isConstellation)activeConstellationId=obj.id;
+ relatedConstellationId=isConstellation?null:relatedConstellation(obj);
+ const name=obj.name||obj.display_name||obj.id;
+ const category=isConstellation?"星座":obj.kind||obj.cat||"天体";
+ const magnitude=obj.mag??obj.magnitude_v;
+ const meta=category+(magnitude!==null&&magnitude!==undefined&&Number.isFinite(Number(magnitude))&&Number(magnitude)<30?" · 約"+Number(magnitude).toFixed(1)+"等":"");
+ const story=guideStory({...obj,kind:isConstellation?"星座":obj.kind});
+ $("objectName").textContent=name;
+ $("objectMeta").textContent=meta;
+ $("objectStory").textContent=story.slice(0,1200);
+ $("portraitName").textContent=name;
+ $("portraitMeta").textContent=meta;
+ $("portraitStory").textContent=story.slice(0,4200);
+ for(const id of ["objectConstellationJump","portraitConstellationJump"]){
+  const btn=$(id);btn.hidden=!relatedConstellationId;
+  if(relatedConstellationId){
+   const c=A.D.constellations.find(x=>x.id===relatedConstellationId);
+   btn.textContent=(c?.name||"所属する星座")+"の案内を見る";
+  }
+ }
+ syncConstellationControls();
+ choosePortraitTab("guide");
  $("objectCard").classList.add("show");persist();
 }
 function selectTarget(id,center=true){
@@ -257,19 +365,60 @@ canvas.addEventListener("pointermove",e=>{
   cameraPatch({az:norm(gesture.az-dx/Math.max(1,box.width)*span),alt:clamp(gesture.alt+dy/Math.max(1,box.height)*span*.65,-20,90)});
  }
 });
+function pointToSegmentDistance(p,a,b){
+ const vx=b.x-a.x,vy=b.y-a.y,l2=vx*vx+vy*vy;
+ if(l2<1e-6)return Math.hypot(p.x-a.x,p.y-a.y);
+ const t=clamp(((p.x-a.x)*vx+(p.y-a.y)*vy)/l2,0,1);
+ return Math.hypot(p.x-a.x-t*vx,p.y-a.y-t*vy);
+}
 function pick(p){
- const box=rect(),w=Math.max(1,canvas.width),h=Math.max(1,canvas.height),x=p.x/box.width*w,y=p.y/box.height*h;
- const threshold=Math.max(24,w/box.width*28);let best=null,dist=threshold;
- const candidates=[...lookup,...A.onlineStars().filter(st=>st.mag<=4).slice(0,700)];
- for(const o of candidates){
-  const c=A.targetPosition(o.id,s.time)||o;
-  const q=A.point(c,s,w,h);
-  if(!q||q.x<0||q.x>w||q.y<0||q.y>h)continue;
-  const d=Math.hypot(q.x-x,q.y-y);
-  if(d<dist){best=o;dist=d}
+ const box=rect(),w=Math.max(1,canvas.width),h=Math.max(1,canvas.height);
+ if(box.width<1||box.height<1)return;
+ const sx=w/box.width,sy=h/box.height;
+ const screenPoint=o=>{
+  if(!o)return null;
+  const q=A.point(o,s,w,h);
+  if(!q||q.x<0||q.x>w||q.y<0||q.y>h)return null;
+  return{x:q.x/sx,y:q.y/sy};
+ };
+ let bestObject=null,bestObjectDistance=30;
+ const objects=[
+  ...lookup.filter(o=>o.kind!=="星座"),
+  ...A.onlineStars().filter(st=>Number(st.mag)<=4.2).slice(0,900)
+ ];
+ for(const obj of objects){
+  const q=screenPoint(A.targetPosition(obj.id,s.time)||obj);
+  if(!q)continue;
+  const d=Math.hypot(q.x-p.x,q.y-p.y);
+  if(d<bestObjectDistance){bestObject=obj;bestObjectDistance=d}
  }
- if(best){const obj=findEntry(best.id)||best;showCard(obj)}
- else hideCard();
+ let bestLine=null,bestLineDistance=22;
+ let bestConstellation=null,bestConstellationDistance=50;
+ const projectedStars=new Map();
+ function starPoint(id){
+  if(!projectedStars.has(id))projectedStars.set(id,screenPoint(A.coordFor(id)));
+  return projectedStars.get(id);
+ }
+ for(const obj of A.D.constellations){
+  const rep=screenPoint(obj);
+  if(rep){
+   const d=Math.hypot(rep.x-p.x,rep.y-p.y);
+   if(d<bestConstellationDistance){bestConstellation=obj;bestConstellationDistance=d}
+  }
+  for(const [one,two] of A.constellationSegments(obj.abbr,s)){
+   const a=starPoint(one),b=starPoint(two);
+   if(!a||!b)continue;
+   // Reject projected segments that cross an enormous arc or wrap at the screen edge.
+   if(Math.hypot(a.x-b.x,a.y-b.y)>Math.max(box.width,box.height)*.5)continue;
+   const d=pointToSegmentDistance(p,a,b);
+   if(d<bestLineDistance){bestLine=obj;bestLineDistance=d}
+  }
+ }
+ // Exact taps on an individual star/planet win; a nearby constellation line wins next.
+ const chosen=(bestObject&&bestObjectDistance<13)?bestObject:
+   bestLine||bestObject||bestConstellation;
+ if(chosen)showCard(findEntry(chosen.id)||chosen);
+ else{hideCard();$("portraitName").textContent="星空の案内";$("portraitMeta").textContent="近くに登録された天体がありません";$("portraitStory").textContent="星座線の近くをタップするか、検索から天体や星座を選んでください。"}
 }
 function endPointer(e,cancelled=false){
  if(!pointers.has(e.pointerId))return;
@@ -298,7 +447,7 @@ function loop(t){
  if(t-displayTime>900){renderClock();displayTime=t}
  requestAnimationFrame(loop);
 }
-buildLayers();syncLayers();syncPlace();renderClock();search("");
+buildLayers();buildPortraitLayers();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
 Promise.resolve(A.loadLines()).catch(console.warn);
 Promise.resolve(A.loadMilkyWay()).catch(console.warn);
 Promise.resolve(A.loadOnlineStars()).then(info=>{
