@@ -4,22 +4,54 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Nicole the Astrorium</title>
-<script>
-(function(){
-  var q=new URLSearchParams(location.search);
-  var forced=(q.get("mode")||"").toLowerCase();
-  var ua=navigator.userAgent||"";
-  var ipad=/iPad/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-  var target=forced==="ipad"?"./ipad.html":forced==="pc"?"./presenter.html":ipad?"./ipad.html":"./presenter.html";
-  location.replace(target+location.search+location.hash);
-})();
-</script>
-
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#061a44">
 <link rel="apple-touch-icon" href="./icon-180.png">
+<script>
+(function(){
+  "use strict";
+  // The home URL is the single entry point for both desktop and iPad modes.
+  // Explicit choice persists, while ?mode=auto returns to device detection.
+  var PREFERENCE_KEY = "astrorium-preferred-ui-v1";
+  var params = new URLSearchParams(location.search);
+  var request = (params.get("mode") || "").toLowerCase();
+  var preference = "";
+  try {
+    preference = localStorage.getItem(PREFERENCE_KEY) || "";
+    if (request === "desktop" || request === "pc") {
+      preference = "desktop";
+      localStorage.setItem(PREFERENCE_KEY, preference);
+    } else if (request === "ipad") {
+      preference = "ipad";
+      localStorage.setItem(PREFERENCE_KEY, preference);
+    } else if (request === "auto") {
+      preference = "";
+      localStorage.removeItem(PREFERENCE_KEY);
+    }
+  } catch (_) {
+    // Safari privacy or file:// restrictions: still honor the query parameter.
+    if (request === "desktop" || request === "pc") preference = "desktop";
+    if (request === "ipad") preference = "ipad";
+    if (request === "auto") preference = "";
+  }
+  var userAgent = navigator.userAgent || "";
+  var isIPad = /iPad/i.test(userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var useIPad = preference === "ipad" || (!preference && isIPad);
+  var destination = new URL(useIPad ? "./ipad.html" : "./presenter.html", location.href);
+  params.delete("mode");
+  var remaining = params.toString();
+  destination.search = remaining ? "?" + remaining : "";
+  destination.hash = location.hash;
+  location.replace(destination.href);
+})();
+</script>
 </head>
 <body>
-<p><a href="./presenter.html?mode=pc">PC版を開く</a> / <a href="./ipad.html?mode=ipad">iPad版を開く</a></p>
-<script src="./pwa-register.js"></script></body>
+<p>Nicole the Astrorium の画面を切り替えています。</p>
+<p><a href="./index.html?mode=desktop">PC版を開く</a> /
+<a href="./index.html?mode=ipad">iPad版を開く</a> /
+<a href="./index.html?mode=auto">自動判定に戻す</a></p>
+<script src="./pwa-register.js"></script>
+</body>
 </html>
