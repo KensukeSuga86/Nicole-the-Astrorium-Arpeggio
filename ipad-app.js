@@ -77,14 +77,22 @@ function buildLayers(){
 }
 function setupStarAppearance(){
  const settings=[["starSize","starScale",1,5,1],["starBrightness","starBrightness",.4,2.5,2]];
- for(const [id,key,min,max,decimals] of settings){
-  const input=$(id),caption=$(id+"Value");
-  const update=()=>{const value=Math.max(min,Math.min(max,Number(input.value)));s.display[key]=value;caption.textContent=value.toFixed(decimals);persist()};
-  input.value=String(s.display[key]);caption.textContent=Number(s.display[key]).toFixed(decimals);
-  input.addEventListener("input",update);
+ const sync=()=>{
+  for(const [id,key,,,decimals] of settings)for(const suffix of ["","Landscape"]){
+   $(id+suffix).value=String(s.display[key]);
+   $(id+suffix+"Value").textContent=Number(s.display[key]).toFixed(decimals);
+  }
+  for(const id of ["starSpikes","starSpikesLandscape"])$(id).checked=!!s.display.starSpikes;
+ };
+ for(const [id,key,min,max] of settings)for(const suffix of ["","Landscape"]){
+  $(id+suffix).addEventListener("input",e=>{
+   s.display[key]=Math.max(min,Math.min(max,Number(e.target.value)));sync();persist();
+  });
  }
- const spikes=$("starSpikes");spikes.checked=!!s.display.starSpikes;
- spikes.addEventListener("change",()=>{s.display.starSpikes=spikes.checked;persist()});
+ for(const id of ["starSpikes","starSpikesLandscape"])$(id).addEventListener("change",e=>{
+  s.display.starSpikes=e.target.checked;sync();persist();
+ });
+ sync();
 }
 function buildPortraitLayers(){
  const host=$("portraitLayerList");
@@ -142,19 +150,21 @@ function aboveHorizon(obj){
  return A.altaz(Number(p.ra),Number(p.dec),s.time,s.location.lat,s.location.lon).alt>=0;
 }
 function refreshConstellationPicker(){
- const select=$("portraitConstellationSelect"),old=select.value||activeConstellationId;
  const all=[...A.D.constellations].sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id,"ja"));
- select.replaceChildren();
- for(const [label,showAbove] of [["今、地平線の上にある星座",true],["地平線の下にある星座",false]]){
-  const group=document.createElement("optgroup");group.label=label;
-  for(const obj of all.filter(c=>aboveHorizon(c)===showAbove)){
-   const option=document.createElement("option");option.value=obj.id;
-   option.textContent=obj.name||obj.id;group.append(option);
+ const byVisibility={visible:[],hidden:[]};
+ for(const c of all)(aboveHorizon(c)?byVisibility.visible:byVisibility.hidden).push(c);
+ for(const selectId of ["portraitConstellationSelect","exploreConstellationSelect"]){
+  const select=$(selectId),old=select.value||activeConstellationId;
+  select.replaceChildren();
+  for(const [label,rows] of [["今、地平線の上にある星座",byVisibility.visible],["地平線の下にある星座",byVisibility.hidden]]){
+   if(!rows.length)continue;
+   const group=document.createElement("optgroup");group.label=label;
+   for(const obj of rows){const option=document.createElement("option");option.value=obj.id;option.textContent=obj.name||obj.id;group.append(option)}
+   select.append(group);
   }
-  if(group.children.length)select.append(group);
+  select.value=old;
+  if(!select.value&&all.length)select.value=all[0].id;
  }
- select.value=old;
- if(!select.value&&all.length)select.value=all[0].id;
 }
 const lookup=[
  ...A.D.constellations.map(o=>({...o,kind:"星座"})),
@@ -196,7 +206,7 @@ function syncConstellationControls(){
   button.textContent=constToggleLabels[key]+" "+(enabled?"ON":"OFF");
   button.disabled=!id;
  });
- if(id)$("portraitConstellationSelect").value=id;
+ if(id){$("portraitConstellationSelect").value=id;$("exploreConstellationSelect").value=id;}
 }
 function toggleIndividualConstellation(key){
  if(!activeConstellationId||!constToggleLabels[key])return;
@@ -215,9 +225,14 @@ $("portraitConstellationJump").onclick=jumpToRelatedConstellation;
 function initConstellationPicker(){
  activeConstellationId=A.D.constellations.find(c=>c.id==="Ori")?.id||A.D.constellations[0]?.id||null;
  refreshConstellationPicker();
- const select=$("portraitConstellationSelect");
- select.value=activeConstellationId||"";
- select.onchange=()=>{selectTarget(select.value,true);choosePortraitTab("constellations")};
+ $("portraitConstellationSelect").value=activeConstellationId||"";
+ $("exploreConstellationSelect").value=activeConstellationId||"";
+ $("portraitConstellationSelect").onchange=()=>{selectTarget($("portraitConstellationSelect").value,true);choosePortraitTab("constellations")};
+ $("exploreConstellationSelect").onchange=()=>{
+  activeConstellationId=$("exploreConstellationSelect").value;
+  $("portraitConstellationSelect").value=activeConstellationId;syncConstellationControls();
+ };
+ $("exploreCenterConstellation").onclick=()=>selectTarget($("exploreConstellationSelect").value,true);
  $("portraitCenterConstellation").onclick=()=>{
   if(!activeConstellationId)return;
   selectTarget(activeConstellationId,true);choosePortraitTab("constellations");
@@ -483,7 +498,15 @@ function loop(t){
  requestAnimationFrame(loop);
 }
 buildLayers();buildPortraitLayers();setupStarAppearance();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
-Promise.resolve(A.loadLines()).catch(console.warn);
+Promise.resolve(A.loadLines()).then(info=>{
+ let total=0,ready=0;
+ for(const c of A.D.constellations)for(const [a,b] of A.constellationSegments(c.abbr,s)){
+  total++;if(A.coordFor(a)&&A.coordFor(b))ready++;
+ }
+ const ok=info?.full&&ready===total&&total>0;
+ $("lineStatus").textContent="星座線 "+ready+" / "+total+" 線分の座標を確認"+(ok?"（正常）":"（データ不足。再読み込みしてください）");
+ if(!ok)notice("星座線データが不完全です");
+}).catch(error=>{console.error(error);$("lineStatus").textContent="星座線データの読み込みに失敗しました";notice("星座線データを確認してください")});
 Promise.resolve(A.loadMilkyWay()).catch(console.warn);
 Promise.resolve(A.loadOnlineStars()).then(info=>{
  $("catalogStatus").textContent=info.count?"追加恒星 "+info.count.toLocaleString("ja-JP")+"件を読み込みました。":"追加の約8等星カタログは未登録です。必要ならJSONを取り込んでください。";

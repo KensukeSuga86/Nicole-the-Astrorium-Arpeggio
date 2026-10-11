@@ -46,10 +46,10 @@ const dir16=az=>DIR16[Math.round(norm(az)/22.5)%16];
 const STANDARD_LINES=Object.fromEntries((D.constellationStandard||[]).map(c=>[c.abbr||c.id,(c.lines||[]).map(x=>[x[0],x[1]])]));
 const DB_LINE_STARS=Object.fromEntries((D.constellationLineStars||[]).filter(x=>x.ra!=null&&x.dec!=null&&Number.isFinite(Number(x.ra))&&Number.isFinite(Number(x.dec))).map(x=>[x.id,{id:x.id,hip:x.hip,ra:Number(x.ra),dec:Number(x.dec),mag:Number.isFinite(Number(x.mag))?Number(x.mag):6,name:x.name||null}]));
 let WSTARS={...DB_LINE_STARS},WLINES={...STANDARD_LINES},FULL_LINES=Object.keys(STANDARD_LINES).length===88,ONLINE_STARS=[],ONLINE_STAR_BY_ID={},USER_STARS={},MW_DATA=null,NIGHT_COMETS=[],METEORS=[];
-const LINE_CACHE="astrorium_western_lines_v3", STAR_CACHE_LEGACY="astrorium_d3_stars6_v1", MW_CACHE="astrorium_mw_v1", COMET_CACHE="astrorium_comets_v1", METEOR_CACHE="astrorium_meteors_v1";
+const LINE_CACHE="astrorium_western_lines_v4_offline", STAR_CACHE_LEGACY="astrorium_d3_stars6_v1", MW_CACHE="astrorium_mw_v1", COMET_CACHE="astrorium_comets_v1", METEOR_CACHE="astrorium_meteors_v1";
 const STAR_IDB_NAME="nicole-astrorium-star-catalog", STAR_IDB_STORE="catalog", STAR_IDB_KEY="d3-celestial-stars8-v1";
 const LINE_URLS=["https://raw.githubusercontent.com/creativival/hipparcos_planetarium_data_creator/main/data/hip_constellation_line.csv","https://creativival.github.io/hipparcos_planetarium_data_creator/data/hip_constellation_line.csv"];
-const STARLINE_URLS=["https://raw.githubusercontent.com/creativival/hipparcos_planetarium_data_creator/main/data/hip_constellation_line_star.csv","https://creativival.github.io/hipparcos_planetarium_data_creator/data/hip_constellation_line_star.csv"];
+const STARLINE_URLS=["./assets/hip_constellation_line_star.csv"];
 const ONLINE_STAR_URL="https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/stars.8.json";
 const ONLINE_STAR_FALLBACK_URL="https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/stars.6.json";
 const MW_URLS=["https://raw.githubusercontent.com/sergio-dr/mw_geojson/main/mw_simplified_43p.json","https://raw.githubusercontent.com/ofrohn/d3-celestial/master/data/mw.json"];
@@ -117,14 +117,35 @@ function bvLabel(bv){if(!Number.isFinite(bv))return"—";if(bv<-.1)return"青白
 function enrichNamedStarColors(){if(!ONLINE_STARS.length)return;for(const st of D.stars){if(st.display_color_hex||Number.isFinite(Number(st.bv)))continue;let best=null,bd=1e9;for(const x of ONLINE_STARS){if(!Number.isFinite(x.bv))continue;const d=angSep(st.ra,st.dec,x.ra,x.dec);if(d<bd){bd=d;best=x}}if(best&&bd<.12){st.bv=best.bv;st.colorLabel=bvLabel(best.bv)}}}
 async function loadLines(){
  const standardReady=Object.keys(STANDARD_LINES).length===88;
- const c=cacheGet(LINE_CACHE);
+ const cached=cacheGet(LINE_CACHE);
+ const builtInCount=Object.keys(DB_LINE_STARS).length;
  if(standardReady){
-   if(c&&c.s){WSTARS={...c.s,...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=true;return{full:true,standard:true,coordinates:Object.keys(WSTARS).length,cached:true}}
-   try{const st=await fetchFirst(STARLINE_URLS),ss=parseLineStars(st);WSTARS={...ss,...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=true;cacheSet(LINE_CACHE,{s:ss,l:STANDARD_LINES,standardVersion:"0.3.2"});return{full:true,standard:true,coordinates:Object.keys(WSTARS).length,cached:false}}catch(e){WSTARS={...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=true;return{full:true,standard:true,coordinates:Object.keys(WSTARS).length,partialCoordinates:true,error:String(e)}}
+  // Always use a complete, versioned local coordinate table. The old remote fetch
+  // was blocked by fetchTimed(), leaving approximately 490 star coordinates absent.
+  if(cached?.s&&Object.keys(cached.s).length>=650){
+   WSTARS={...cached.s,...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=true;
+   return {full:true,standard:true,coordinates:Object.keys(WSTARS).length,cached:true};
+  }
+  try{
+   const raw=await fetchFirst(STARLINE_URLS),coordinates=parseLineStars(raw);
+   if(Object.keys(coordinates).length<650)throw Error("同梱星座線座標が不完全です");
+   WSTARS={...coordinates,...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=true;
+   cacheSet(LINE_CACHE,{s:coordinates,standardVersion:"0.3.3-offline"});
+   return {full:true,standard:true,coordinates:Object.keys(WSTARS).length,cached:false};
+  }catch(error){
+   WSTARS={...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=false;
+   console.error("星座線の恒星座標が不足しています",error);
+   return {full:false,standard:true,coordinates:builtInCount,partialCoordinates:true,error:String(error)};
+  }
  }
- if(c&&c.s&&c.l){WSTARS=c.s;WLINES=c.l;FULL_LINES=true;return{full:true}}
- try{const [lt,st]=await Promise.all([fetchFirst(LINE_URLS),fetchFirst(STARLINE_URLS)]),ss=parseLineStars(st),ll=parseLines(lt,ss);if(Object.keys(ll).length<70)throw Error("incomplete");WSTARS=ss;WLINES=ll;FULL_LINES=true;cacheSet(LINE_CACHE,{s:ss,l:ll});return{full:true}}catch(e){return{full:false}}
+ try{
+  const raw=await fetchFirst(STARLINE_URLS),ss=parseLineStars(raw);
+  const lines=Object.keys(WLINES).length?WLINES:FALLBACK;
+  WSTARS={...ss,...DB_LINE_STARS};WLINES={...lines};FULL_LINES=true;
+  return {full:true,standard:false,coordinates:Object.keys(WSTARS).length};
+ }catch(error){console.error("星座線データ読込失敗",error);return{full:false,error:String(error)}}
 }
+
 async function importStarCatalogText(text){const stars=parseD3Stars(JSON.parse(text));if(stars.length<1000)throw new Error("星カタログとして読み込めません（"+stars.length+"件）");installOnlineStars(stars);await starCatalogSet({version:1,source:"imported file",maxMag:8,storedAt:Date.now(),stars});return{count:stars.length}}
 async function loadOnlineStars(){
  const c=await starCatalogGet();
@@ -297,6 +318,23 @@ function render(canvas,s,drawAnn=true,opts={}){
  const rdA=fade("global:radecGrid",!!s.global.radecGrid);if(rdA>0){ctx.save();ctx.globalAlpha=rdA;drawRaDecGrid(ctx,s,w,h,dpr);ctx.restore()}
  for(const c of D.constellations){const a=fade("line:"+c.id,effectiveConst(s,c.id,"line"));if(a<=0)continue;ctx.strokeStyle=`rgba(105,190,235,${.8*a})`;ctx.lineWidth=1.25*dpr;for(const[u,v]of segmentsFor(c.abbr,s)){const p=point(coordFor(u),s,w,h),q=point(coordFor(v),s,w,h);if(p&&q&&Math.hypot(p.x-q.x,p.y-q.y)<w*.7){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}}
  const userConstellations=Array.isArray(s.customConstellations)?s.customConstellations:[];for(const c of userConstellations){if(!c||c.visible===false)continue;const a=fade("custom-line:"+(c.id||c.name||"user"),true);if(a<=0)continue;ctx.save();ctx.strokeStyle=`rgba(222,164,255,${.9*a})`;ctx.lineWidth=1.7*dpr;for(const sg of(Array.isArray(c.segments)?c.segments:[])){const u=String(sg?.[0]||""),v=String(sg?.[1]||"");if(!u||!v)continue;const p=point(coordFor(u),s,w,h),q=point(coordFor(v),s,w,h);if(p&&q&&Math.hypot(p.x-q.x,p.y-q.y)<w*.75){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}ctx.restore()}
+ if(starsA>0&&opts.gpuSkyLayer&&display?.starSpikes){
+  // GPU stars do not run drawStarField(), so add bright-star spikes to the 2D overlay.
+  ctx.save();ctx.lineCap="round";
+  for(const st of D.stars){
+   const mag=Number(st.mag);
+   if(!Number.isFinite(mag)||mag>1)continue;
+   const p=point(st,s,w,h);if(!p||!inside(p,w,h,5))continue;
+   const sunVis=limitingMag(effectiveSunAlt,effectiveStarMagLimit(s))-moonPenalty;
+   if(mag>sunVis)continue;
+   const length=(2.4+Math.max(0,1-mag))*Number(display.starScale||2.3)*dpr;
+   const alpha=Math.min(.5,Math.max(.14,starsA*.38*Number(display.starBrightness||1)));
+   ctx.strokeStyle=`rgba(231,240,255,${alpha})`;ctx.lineWidth=Math.max(.75,dpr*.7);
+   ctx.beginPath();ctx.moveTo(p.x-length,p.y);ctx.lineTo(p.x+length,p.y);
+   ctx.moveTo(p.x,p.y-length);ctx.lineTo(p.x,p.y+length);ctx.stroke();
+  }
+  ctx.restore();
+ }
  if(starsA>0&&!opts.gpuSkyLayer){if(opts.starLayer){ctx.save();ctx.globalAlpha=starsA;ctx.drawImage(opts.starLayer,0,0,w,h);ctx.restore()}else if(!opts.skipStars)drawStarField(ctx,s,w,h,dpr,effectiveSunAlt,starsA,moonPenalty,display);}
  const snA=fade("global:starNames",!!s.global.starNames);if(snA>0){ctx.font=`${8*(display.objectTextScale||4)*dpr}px ${fontFamily}`;ctx.textAlign="left";ctx.globalAlpha=snA;for(const st of D.stars){if(Number(st.mag)>Math.min(effectiveStarMagLimit(s),3.3))continue;const p=point(st,s,w,h);if(!p)continue;ctx.fillStyle="#ff9898";skyText(ctx,s,w,h,p,st.display_name||st.name,4*dpr,-3*dpr)}ctx.globalAlpha=1}
  const artEntries=[];for(const c of D.constellations){const p=point(c,s,w,h),a=fade("name:"+c.id,effectiveConst(s,c.id,"name"));if(p&&a>0){ctx.fillStyle=`rgba(150,220,255,${a})`;ctx.font=`${10*(display.constellationTextScale||4)*dpr}px ${fontFamily}`;ctx.textAlign="center";skyText(ctx,s,w,h,p,c.name,0,0)}const artA=fade("art:"+c.id,effectiveConst(s,c.id,"art"));if(artA>.001&&ART[c.id])artEntries.push({id:c.id,alpha:artA})}if(!opts.gpuSkyLayer||!opts.gpuArtsReady)drawConstellationArts(ctx,s,w,h,artEntries,opts);for(const c of userConstellations){if(!c||c.visible===false||c.showName===false)continue;const q=customConstellationCenter(c),p=q?point(q,s,w,h):null,a=fade("custom-name:"+(c.id||c.name||"user"),true);if(!p||a<=0)continue;ctx.save();ctx.globalAlpha=a;ctx.fillStyle="#e6b4ff";ctx.font=`${10*(display.constellationTextScale||4)*dpr}px ${fontFamily}`;ctx.textAlign="center";skyText(ctx,s,w,h,p,c.name||c.abbr||"自作星座",0,-8*dpr);ctx.restore()}
