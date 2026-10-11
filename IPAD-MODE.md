@@ -14,10 +14,15 @@ GitHub Pages のリポジトリルート（index.html）へアクセスすると
 直接起動:
 - iPad: ipad.html
 - PC: presenter.html
-- iPadから強制的にPC版: index.html?mode=pc
-- PCからiPad版を試す: index.html?mode=ipad
+- iPadからPC版に切り替える: index.html?mode=desktop （従来の mode=pc も使用可）
+- PCからiPad版に切り替える: index.html?mode=ipad
+- 端末ごとの自動判定に戻す: index.html?mode=auto
 
-端末判定は iPad のUA、またはiPadOSのデスクトップモードに該当する MacIntel && maxTouchPoints > 1 を使用します。iPhoneはiPad版への自動振り分け対象外です。
+最初は端末に応じて自動的に画面を選択します。手動でPC版／iPad版を選んだ場合、その選択は同一のブラウザ保存領域に `astrorium-preferred-ui-v1` として保持され、次回以降のトップページアクセスにも適用されます。手動選択を解除するには mode=auto を使います。
+
+iPad版では「データ」タブからPC版へ切り替え可能。PC版では「設定」からiPad版へ切り替えられます。どちらからも自動判定へ復帰できます。
+
+端末判定は iPad のUA、またはiPadOSのデスクトップモードに該当する MacIntel && maxTouchPoints > 1 を使用します。iPhoneはiPad版への自動振り分け対象外です。ブラウザの保存領域が利用できない場合も、URLの mode 指定はその場の起動に反映されます。
 
 ## iPadの操作
 
