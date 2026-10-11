@@ -6,7 +6,7 @@ GitHub Pages のトップ（index.html）からアクセスすると、**iPadは
 
 iPad版では、星空を一本指でドラッグ、二本指でピンチズーム、天体をタップして星座・天体の案内を表示。星座案内から星座線・星座絵・星座名を個別にON/OFFできます。**縦向きは上2/3に星空・下1/3に常設コンソール**、横向きは従来どおりの全面星空UIです。天体検索、時刻再生、レイヤー切り替え、テーマ鑑賞、星カタログ取り込みにも対応します。
 
-自動判定を変更したい場合は index.html?mode=pc または index.html?mode=ipad を指定します。詳しくは [IPAD-MODE.md](./IPAD-MODE.md) を参照してください。
+自動判定を変更したい場合は `index.html?mode=desktop` または `index.html?mode=ipad` を指定します。選択はブラウザ内に記憶され、`index.html?mode=auto` で自動判定に戻せます。iPad側の「データ」とPC側の「設定」からも切り替え可能です。詳しくは [IPAD-MODE.md](./IPAD-MODE.md) を参照してください。
 
 **実機iPadOS Safari/PWAテストは未実施**です。
 
