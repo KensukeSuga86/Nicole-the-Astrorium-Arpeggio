@@ -24,6 +24,8 @@
     "zodiac12MasterToggle": "constellation-name-line-art-v1",
     "ipadSingleScreen": "touch-planetarium-v1",
     "ipadDeviceRouting": "automatic-index-v1",
-    "ipadUserState": "localstorage-v1"
+    "ipadUserState": "localstorage-v1",
+    "ipadConstellationGuides": "per-constellation-line-art-name-v1",
+    "ipadPortraitLayout": "sky-2of3-console-1of3-v1"
   }
 }
