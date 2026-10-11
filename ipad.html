@@ -68,6 +68,44 @@ header{top:0;padding:max(12px,env(safe-area-inset-top,0px)) max(16px,env(safe-ar
 input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
 @media(max-width:600px){#sheet{left:0;right:0;bottom:0;top:auto;width:100%;height:min(79dvh,700px);border-radius:24px 24px 0 0;transform:translateY(105%)}#sheet.open{transform:translateY(0)}#footer{justify-content:center}.controls{gap:0;padding:4px}.control{padding:8px 9px;font-size:13px;min-width:43px}#objectCard{top:74px}}
 @media(prefers-reduced-motion:reduce){#sheet,#scrim,#notice{transition:none}}
+
+/* Portrait iPad: 2/3 sky + 1/3 persistent console. Landscape stays unchanged. */
+#portraitConsole{display:none}
+.constellationActions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.constellationActions[hidden],.relatedConstellation[hidden]{display:none!important}
+.constellationToggle{background:rgba(19,40,62,.93);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:43px;font-size:13px}
+.constellationToggle[aria-pressed="true"]{border-color:#e3c57e;background:rgba(222,184,99,.24);color:#ffe5a0}
+.relatedConstellation{background:rgba(21,41,61,.95);border:1px solid var(--line);padding:9px 12px;min-height:42px;border-radius:9px;margin-top:8px}
+#portraitConsole .pTab{background:transparent;border:1px solid var(--line);border-radius:10px;min-height:38px;padding:7px 13px;font-size:13px}
+#portraitConsole .pTab.active{background:rgba(221,187,106,.18);color:#ffe1a0;border-color:#c8a65e}
+#portraitConsole .pPage{display:none;overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0;padding:2px 5px 8px}
+#portraitConsole .pPage.active{display:block}
+#portraitConsole .pHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px}
+#portraitConsole .pTabs{display:flex;align-items:center;gap:6px}
+#portraitConsole h3{font-size:16px;color:#ffe4a9;margin:5px 0}
+#portraitConsole .pMeta{font-size:12px;color:#acc5e0}
+#portraitConsole .pStory{font-size:13px;line-height:1.6;color:#cfdeef;margin:7px 0;white-space:pre-wrap}
+#portraitConsole .pFields{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+#portraitConsole .pFields select{width:min(100%,350px);background:#10243a;border:1px solid var(--line);min-height:42px;border-radius:10px;padding:7px;color:var(--fg)}
+#portraitConsole .pLayers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#portraitConsole .pLayer{font-size:12px;display:flex;gap:6px;align-items:center;padding:6px 7px;background:rgba(18,38,58,.7);border:1px solid var(--line);border-radius:9px;min-height:39px}
+#portraitConsole .pLayer input{accent-color:#e4c581;width:17px;height:17px;flex:none}
+@media (orientation:portrait){
+  #sky{inset:0 auto auto 0;width:100%;height:66.666667dvh}
+  #veil{top:0;bottom:auto;height:66.666667dvh}
+  #hint{top:33.333333dvh}
+  #portraitConsole{display:flex;position:fixed;z-index:6;left:0;right:0;top:66.666667dvh;bottom:0;flex-direction:column;background:#0b1729;border-top:1px solid rgba(181,208,239,.3);padding:12px max(15px,env(safe-area-inset-right,0px)) calc(71px + var(--safe-bottom)) max(15px,env(safe-area-inset-left,0px));}
+  #footer{z-index:7;bottom:0;justify-content:center;background:#0b1729;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + var(--safe-bottom)) max(8px,env(safe-area-inset-left,0px))}
+  #footer .controls{max-width:100%;padding:3px}
+  #objectCard{display:none!important}
+  #notice{bottom:calc(33.333333dvh + 12px)}
+  #scrim{z-index:9}
+  #sheet{z-index:10}
+}
+@media (orientation:portrait) and (max-width:600px){
+  #portraitConsole .pLayers{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #portraitConsole{padding-bottom:calc(69px + var(--safe-bottom))}
+}
 </style>
 </head>
 <body>
@@ -79,7 +117,43 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   <button class="round" id="openSearch" aria-label="天体検索">⌕</button>
   <button class="round" id="openSettings" aria-label="メニューを開く">☷</button>
 </header>
-<aside class="glass" id="objectCard" aria-live="polite"><button id="cardClose" aria-label="閉じる">×</button><h3 id="objectName"></h3><p id="objectMeta"></p><p id="objectStory"></p></aside>
+<aside class="glass" id="objectCard" aria-live="polite"><button id="cardClose" aria-label="閉じる">×</button><h3 id="objectName"></h3><p id="objectMeta"></p><p id="objectStory"></p>
+<div class="constellationActions" id="constellationCardActions" hidden>
+ <button class="constellationToggle" data-const-toggle="line" aria-pressed="false">星座線</button>
+ <button class="constellationToggle" data-const-toggle="art" aria-pressed="false">星座絵</button>
+ <button class="constellationToggle" data-const-toggle="name" aria-pressed="false">星座名</button>
+</div>
+<button class="relatedConstellation" id="objectConstellationJump" hidden>所属する星座を見る</button>
+</aside>
+<section id="portraitConsole" aria-label="iPadプラネタリウムコンソール">
+ <div class="pHead"><nav class="pTabs" aria-label="コンソールの表示">
+  <button class="pTab active" data-portrait-tab="guide" aria-pressed="true">案内</button>
+  <button class="pTab" data-portrait-tab="constellations" aria-pressed="false">星座</button>
+  <button class="pTab" data-portrait-tab="layers" aria-pressed="false">表示</button>
+ </nav><button class="pTab" id="portraitOpenSearch">⌕ 探す</button></div>
+ <div class="pPage active" data-portrait-page="guide">
+  <h3 id="portraitName">星空の案内</h3>
+  <div class="pMeta" id="portraitMeta">星座・恒星・惑星などを星空でタップしてください。</div>
+  <p class="pStory" id="portraitStory">星座を選ぶと、その星座の解説を読みながら、星座線・星座絵・星座名を個別に切り替えられます。</p>
+  <div class="constellationActions" id="portraitGuideActions" hidden>
+   <button class="constellationToggle" data-const-toggle="line" aria-pressed="false">星座線</button>
+   <button class="constellationToggle" data-const-toggle="art" aria-pressed="false">星座絵</button>
+   <button class="constellationToggle" data-const-toggle="name" aria-pressed="false">星座名</button>
+  </div>
+  <button class="relatedConstellation" id="portraitConstellationJump" hidden>所属する星座を見る</button>
+ </div>
+ <div class="pPage" data-portrait-page="constellations">
+  <p class="note">星座を選び、星座線・星座絵・名前をその星座だけ表示・非表示にできます。</p>
+  <div class="pFields"><select id="portraitConstellationSelect" aria-label="星座を選択"></select>
+  <button class="constellationToggle" id="portraitCenterConstellation">星座へ移動</button></div>
+  <div class="constellationActions" id="portraitConstellationActions" hidden>
+   <button class="constellationToggle" data-const-toggle="line" aria-pressed="false">星座線</button>
+   <button class="constellationToggle" data-const-toggle="art" aria-pressed="false">星座絵</button>
+   <button class="constellationToggle" data-const-toggle="name" aria-pressed="false">星座名</button>
+  </div>
+ </div>
+ <div class="pPage" data-portrait-page="layers"><div class="pLayers" id="portraitLayerList"></div></div>
+</section>
 <footer class="chrome" id="footer"><div class="glass controls">
 <button class="control" id="stepBack" aria-label="1時間戻す">−1h</button>
 <button class="control primary" id="play" aria-pressed="false">▶ 再生</button>
