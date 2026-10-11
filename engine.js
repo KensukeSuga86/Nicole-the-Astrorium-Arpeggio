@@ -291,7 +291,8 @@ function ensureAtmosLayer(w,h){const maxW=640,maxH=360,sc=Math.min(1,maxW/Math.m
 function qn(v,step){return Math.round(Number(v||0)/step)*step}
 function drawAtmosphereLight(ctx,s,w,h,dayA,su,suaa,moonLightA,mo,mp,effectiveSunAlt){const layer=ensureAtmosLayer(w,h),lc=layer.getContext("2d"),lw=layer.width,lh=layer.height;const sp=dayA>0&&suaa.alt>-18?point(su,s,w,h):null;let ml=0,ma=null;if(moonLightA>0&&mp){ma=altaz(mo.ra,mo.dec,s.time,s.location.lat,s.location.lon);const night=smooth01(clamp((-effectiveSunAlt-2)/10,0,1)),above=smooth01(clamp(ma.alt/8,0,1));ml=moonLightA*night*above}const sx=sp?sp.x/w*lw:-999,sy=sp?sp.y/h*lh:-999,mx=mp?mp.x/w*lw:-999,my=mp?mp.y/h*lh:-999;const key=[lw,lh,s.projection,qn(dayA,.025),qn(suaa.alt,.35),qn(sx,6),qn(sy,6),qn(ml,.025),qn(mx,6),qn(my,6)].join("|");if(key!==ATMOS_CACHE.key){ATMOS_CACHE.key=key;lc.clearRect(0,0,lw,lh);lc.save();lc.globalCompositeOperation="source-over";if(sp&&dayA>.001){const r=Math.max(lw,lh)*.55,g=lc.createRadialGradient(sx,sy,0,sx,sy,r);g.addColorStop(0,`rgba(255,205,145,${.34*dayA})`);g.addColorStop(.55,`rgba(120,185,235,${.12*dayA})`);g.addColorStop(1,"rgba(80,150,220,0)");lc.fillStyle=g;lc.fillRect(0,0,lw,lh)}if(mp&&ml>.001){const r=Math.max(lw,lh)*.42,g=lc.createRadialGradient(mx,my,0,mx,my,r);g.addColorStop(0,`rgba(205,220,238,${.20*ml})`);g.addColorStop(.5,`rgba(130,155,190,${.07*ml})`);g.addColorStop(1,"rgba(70,100,140,0)");lc.fillStyle=g;lc.fillRect(0,0,lw,lh)}lc.restore()}ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="low";ctx.drawImage(layer,0,0,w,h);ctx.restore()}
 const FAST_STAR_CACHE=new WeakMap();function starVec(st){let v=FAST_STAR_CACHE.get(st);if(v)return v;const ra=Number(st.ra)*R,de=Number(st.dec)*R,cd=Math.cos(de);v={x:cd*Math.cos(ra),y:cd*Math.sin(ra),z:Math.sin(de),mag:Number(st.mag),id:st.id||"",col:st.display_color_hex?hexToRgb(st.display_color_hex):bvColor(Number(st.bv))};FAST_STAR_CACHE.set(st,v);return v}function fastHorizontal(v){const f=FRAME_ASTRO;if(!f)return null;const ch=f.cosLst*v.x+f.sinLst*v.y,sh=f.sinLst*v.x-f.cosLst*v.y,n=v.z*f.cosLat-ch*f.sinLat,e=-sh,u=v.z*f.sinLat+ch*f.cosLat;return{n,e,u}}
-function drawStarField(ctx,s,w,h,dpr,sunAlt,layerAlpha=1,moonPenalty=0,display){if(layerAlpha<=0)return;const now=performance.now(),base=ONLINE_STARS.length?ONLINE_STARS:D.stars,extra=Object.values(USER_STARS).filter(st=>ONLINE_STARS.length?!ONLINE_STAR_BY_ID[st.id]:!S[st.id]),arr=extra.length?[...base,...extra]:base,all=s.projection==="allsky",f=FRAME_ASTRO,rad=Math.min(w,h)*.47,starScale=display?.starScale||4,magLim=effectiveStarMagLimit(s),fastMagLim=Math.min(magLim,limitingMag(sunAlt,magLim)-moonPenalty+1.55);for(const st of arr){const v=starVec(st);if(v.mag>fastMagLim)continue;let p,alt;if(f){const q=fastHorizontal(v);if(!q||q.u<-.02)continue;alt=Math.asin(clamp(q.u,-1,1))/R;const aa=apparentAlt(alt);if(all){if(aa<0)continue;const den=Math.max(1e-7,Math.hypot(q.n,q.e)),rr=(90-aa)/90*rad;p={x:w/2-rr*(q.e/den),y:h/2-rr*(q.n/den),z:1}}else{const az=norm(Math.atan2(q.e,q.n)/R);p=projectRaw(az,aa,s,w,h);if(!p)continue}}else{const aa=altaz(st.ra,st.dec,s.time,s.location.lat,s.location.lon);alt=aa.alt;if(alt<-.8)continue;p=projectRaw(aa.az,apparentAlt(alt),s,w,h);if(!p)continue}if(!inside(p,w,h,3))continue;let col=v.col;const warm=clamp((18-alt)/42,0,.20);if(warm>0)col=mix(col,[255,185,135],warm);const starBrightness=Math.max(.25,Math.min(2.5,Number(display?.starBrightness)||1)),a=Math.min(1,layerAlpha*starBrightness*starAlpha(v.mag,alt,sunAlt,v.id,now,magLim,moonPenalty,!!s.global.scintillation,s.global.scintillationStrength));if(a<.004)continue;ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${a})`;const rr=.72*starScale*dpr;if(all&&v.mag>2.5){const z=Math.max(1,rr*.72);ctx.fillRect(p.x-z*.5,p.y-z*.5,z,z)}else{ctx.beginPath();ctx.arc(p.x,p.y,rr,0,Math.PI*2);ctx.fill();if(display?.starSpikes&&v.mag<=1&&a>.2){const len=(2.4+Math.max(0,1-v.mag)*1.0)*starScale*dpr;ctx.save();ctx.translate(p.x,p.y);ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},${Math.min(.52,a*.38)})`;ctx.lineWidth=Math.max(.65,dpr*.65);ctx.beginPath();ctx.moveTo(-len,0);ctx.lineTo(len,0);ctx.moveTo(0,-len);ctx.lineTo(0,len);ctx.stroke();ctx.restore()}if(v.mag<1.2&&a>.28){ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${a*.18})`;ctx.beginPath();ctx.arc(p.x,p.y,1.45*starScale*dpr,0,Math.PI*2);ctx.fill()}}}}
+function AstroriumStarSpikePosition(st,s,w,h){return point(st,s,w,h)}
+function drawStarField(ctx,s,w,h,dpr,sunAlt,layerAlpha=1,moonPenalty=0,display){if(layerAlpha<=0)return;const now=performance.now(),base=ONLINE_STARS.length?ONLINE_STARS:D.stars,extra=Object.values(USER_STARS).filter(st=>ONLINE_STARS.length?!ONLINE_STAR_BY_ID[st.id]:!S[st.id]),arr=extra.length?[...base,...extra]:base,all=s.projection==="allsky",f=FRAME_ASTRO,rad=Math.min(w,h)*.47,starScale=display?.starScale||4,magLim=effectiveStarMagLimit(s),fastMagLim=Math.min(magLim,limitingMag(sunAlt,magLim)-moonPenalty+1.55);for(const st of arr){const v=starVec(st);if(v.mag>fastMagLim)continue;let p,alt;if(f){const q=fastHorizontal(v);if(!q||q.u<-.02)continue;alt=Math.asin(clamp(q.u,-1,1))/R;const aa=apparentAlt(alt);if(all){if(aa<0)continue;const den=Math.max(1e-7,Math.hypot(q.n,q.e)),rr=(90-aa)/90*rad;p={x:w/2-rr*(q.e/den),y:h/2-rr*(q.n/den),z:1}}else{const az=norm(Math.atan2(q.e,q.n)/R);p=projectRaw(az,aa,s,w,h);if(!p)continue}}else{const aa=altaz(st.ra,st.dec,s.time,s.location.lat,s.location.lon);alt=aa.alt;if(alt<-.8)continue;p=projectRaw(aa.az,apparentAlt(alt),s,w,h);if(!p)continue}if(!inside(p,w,h,3))continue;let col=v.col;const warm=clamp((18-alt)/42,0,.20);if(warm>0)col=mix(col,[255,185,135],warm);const isIPad=!!display?.ipadStarAppearanceV1,starBrightness=Math.max(.25,Math.min(isIPad?4:2.5,Number(display?.starBrightness)||1)),baseAlpha=layerAlpha*starAlpha(v.mag,alt,sunAlt,v.id,now,magLim,moonPenalty,!!s.global.scintillation,s.global.scintillationStrength),a=Math.min(1,isIPad?Math.pow(Math.max(0,baseAlpha),.62)*starBrightness*.83:baseAlpha*starBrightness);if(a<.004)continue;ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${a})`;const rr=.72*starScale*dpr*(isIPad?clamp(Math.pow(2.512,(3-v.mag)*.17),.66,2):1);if(all&&v.mag>2.5){const z=Math.max(1,rr*.72);ctx.fillRect(p.x-z*.5,p.y-z*.5,z,z)}else{ctx.beginPath();ctx.arc(p.x,p.y,rr,0,Math.PI*2);ctx.fill();if(v.mag<1.2&&a>.28){ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${a*.18})`;ctx.beginPath();ctx.arc(p.x,p.y,1.45*starScale*dpr,0,Math.PI*2);ctx.fill()}}}}
 
 const NATURAL_DSO_EXTRA=[
 {id:"LMC",name:"大マゼラン雲",ra:80.8942,dec:-69.7561,mag:.9,type:"galaxy",major:10.5,minor:8.0},
@@ -318,20 +319,40 @@ function render(canvas,s,drawAnn=true,opts={}){
  const rdA=fade("global:radecGrid",!!s.global.radecGrid);if(rdA>0){ctx.save();ctx.globalAlpha=rdA;drawRaDecGrid(ctx,s,w,h,dpr);ctx.restore()}
  for(const c of D.constellations){const a=fade("line:"+c.id,effectiveConst(s,c.id,"line"));if(a<=0)continue;ctx.strokeStyle=`rgba(105,190,235,${.8*a})`;ctx.lineWidth=1.25*dpr;for(const[u,v]of segmentsFor(c.abbr,s)){const p=point(coordFor(u),s,w,h),q=point(coordFor(v),s,w,h);if(p&&q&&Math.hypot(p.x-q.x,p.y-q.y)<w*.7){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}}
  const userConstellations=Array.isArray(s.customConstellations)?s.customConstellations:[];for(const c of userConstellations){if(!c||c.visible===false)continue;const a=fade("custom-line:"+(c.id||c.name||"user"),true);if(a<=0)continue;ctx.save();ctx.strokeStyle=`rgba(222,164,255,${.9*a})`;ctx.lineWidth=1.7*dpr;for(const sg of(Array.isArray(c.segments)?c.segments:[])){const u=String(sg?.[0]||""),v=String(sg?.[1]||"");if(!u||!v)continue;const p=point(coordFor(u),s,w,h),q=point(coordFor(v),s,w,h);if(p&&q&&Math.hypot(p.x-q.x,p.y-q.y)<w*.75){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}ctx.restore()}
- if(starsA>0&&opts.gpuSkyLayer&&display?.starSpikes){
-  // GPU stars do not run drawStarField(), so add bright-star spikes to the 2D overlay.
-  ctx.save();ctx.lineCap="round";
+ if(starsA>0&&display?.starSpikes){
+  // Four diffraction spikes with tapered translucent wedges and soft wings,
+  // inspired by Hubble imagery. Applied consistently to GPU and Canvas stars.
+  ctx.save();ctx.globalCompositeOperation="screen";
+  const brightness=Math.max(.4,Math.min(4,Number(display.starBrightness)||1));
   for(const st of D.stars){
-   const mag=Number(st.mag);
-   if(!Number.isFinite(mag)||mag>1)continue;
-   const p=point(st,s,w,h);if(!p||!inside(p,w,h,5))continue;
-   const sunVis=limitingMag(effectiveSunAlt,effectiveStarMagLimit(s))-moonPenalty;
-   if(mag>sunVis)continue;
-   const length=(2.4+Math.max(0,1-mag))*Number(display.starScale||2.3)*dpr;
-   const alpha=Math.min(.5,Math.max(.14,starsA*.38*Number(display.starBrightness||1)));
-   ctx.strokeStyle=`rgba(231,240,255,${alpha})`;ctx.lineWidth=Math.max(.75,dpr*.7);
-   ctx.beginPath();ctx.moveTo(p.x-length,p.y);ctx.lineTo(p.x+length,p.y);
-   ctx.moveTo(p.x,p.y-length);ctx.lineTo(p.x,p.y+length);ctx.stroke();
+   const mag=Number(st.mag),threshold=.9;
+   if(!Number.isFinite(mag)||mag>threshold)continue;
+   const pos=AstroriumStarSpikePosition(st,s,w,h);
+   if(!pos||!inside(pos,w,h,6))continue;
+   if(mag>limitingMag(effectiveSunAlt,effectiveStarMagLimit(s))-moonPenalty)continue;
+   const strength=clamp((1.2-mag)/2.7,.12,1);
+   const length=clamp((6+strength*13)*Number(display.starScale||2.3)*dpr/2.3,6*dpr,54*dpr);
+   const soft=clamp(starsA*brightness*.26,.04,.52)*strength;
+   for(let arm=0;arm<4;arm++){
+    const angle=arm*Math.PI/2,dx=Math.cos(angle),dy=Math.sin(angle),nx=-dy,ny=dx;
+    // Two triangular fans make a narrow core and a broader soft tapered wing.
+    for(const [fraction,width,opacity] of [[1,.18,.24],[.84,.55,.12]]){
+     const reach=length*fraction,base=Math.max(.65*dpr,Math.min(2.2*dpr,length*.07))*width;
+     const grad=ctx.createLinearGradient(pos.x,pos.y,pos.x+dx*reach,pos.y+dy*reach);
+     grad.addColorStop(0,`rgba(245,249,255,${soft*opacity})`);
+     grad.addColorStop(.22,`rgba(225,237,255,${soft*opacity*.8})`);
+     grad.addColorStop(1,"rgba(215,233,255,0)");
+     ctx.fillStyle=grad;ctx.beginPath();
+     ctx.moveTo(pos.x+nx*base,pos.y+ny*base);
+     ctx.lineTo(pos.x+dx*reach,pos.y+dy*reach);
+     ctx.lineTo(pos.x-nx*base,pos.y-ny*base);ctx.closePath();ctx.fill();
+    }
+   }
+   const halo=ctx.createRadialGradient(pos.x,pos.y,0,pos.x,pos.y,Math.max(2*dpr,length*.16));
+   halo.addColorStop(0,`rgba(250,251,255,${Math.min(.6,soft*1.1)})`);
+   halo.addColorStop(.3,`rgba(223,237,255,${soft*.34})`);
+   halo.addColorStop(1,"rgba(210,229,255,0)");
+   ctx.fillStyle=halo;ctx.beginPath();ctx.arc(pos.x,pos.y,Math.max(2*dpr,length*.16),0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
  }
