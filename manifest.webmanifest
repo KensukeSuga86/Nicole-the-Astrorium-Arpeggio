@@ -1,7 +1,7 @@
 {
-  "name": "Nicole the Astrorium",
-  "short_name": "Astrorium",
-  "description": "Nicole the Astrorium — interactive planetarium web application",
+  "name": "Nicole the Astrorium Arpeggio",
+  "short_name": "Arpeggio",
+  "description": "Nicole the Astrorium Arpeggio — interactive planetarium web application",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
