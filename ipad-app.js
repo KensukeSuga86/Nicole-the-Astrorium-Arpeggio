@@ -498,7 +498,15 @@ function loop(t){
  requestAnimationFrame(loop);
 }
 buildLayers();buildPortraitLayers();setupStarAppearance();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
-Promise.resolve(A.loadLines()).catch(console.warn);
+Promise.resolve(A.loadLines()).then(info=>{
+ let total=0,ready=0;
+ for(const c of A.D.constellations)for(const [a,b] of A.constellationSegments(c.abbr,s)){
+  total++;if(A.coordFor(a)&&A.coordFor(b))ready++;
+ }
+ const ok=info?.full&&ready===total&&total>0;
+ $("lineStatus").textContent="星座線 "+ready+" / "+total+" 線分の座標を確認"+(ok?"（正常）":"（データ不足。再読み込みしてください）");
+ if(!ok)notice("星座線データが不完全です");
+}).catch(error=>{console.error(error);$("lineStatus").textContent="星座線データの読み込みに失敗しました";notice("星座線データを確認してください")});
 Promise.resolve(A.loadMilkyWay()).catch(console.warn);
 Promise.resolve(A.loadOnlineStars()).then(info=>{
  $("catalogStatus").textContent=info.count?"追加恒星 "+info.count.toLocaleString("ja-JP")+"件を読み込みました。":"追加の約8等星カタログは未登録です。必要ならJSONを取り込んでください。";
