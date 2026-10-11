@@ -19,7 +19,8 @@ s.rate=[1,60,600,3600].includes(Number(s.rate))?Number(s.rate):60;
 s.global.direction=false;s.global.time=false;s.global.coordinates=false;
 // Remove legacy selection labels/highlights on constellations; layer visibility now owns their names.
 for(const c of A.D.constellations){delete s.highlights[c.id];delete s.labels[c.id]}
-s.display={...s.display,starScale:1.5,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
+if(!s.display?.ipadStarAppearanceV1)s.display={...s.display,starScale:2.3,starBrightness:1.25,starSpikes:true,ipadStarAppearanceV1:true};
+s.display={...s.display,starScale:Math.max(1,Math.min(5,Number(s.display.starScale)||2.3)),starBrightness:Math.max(.4,Math.min(2.5,Number(s.display.starBrightness)||1.25)),starSpikes:s.display.starSpikes!==false,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
 function anchor(){clockAnchor=performance.now();timeAnchor=s.time.getTime()}
 anchor();
 const renderer=window.AstroriumRenderer.createRenderer(canvas,A,{backend:"auto"});
@@ -73,6 +74,17 @@ function buildLayers(){
   check.addEventListener("change",()=>changeLayer(key,check.checked));
   row.append(span,check);host.appendChild(row);
  }
+}
+function setupStarAppearance(){
+ const settings=[["starSize","starScale",1,5,1],["starBrightness","starBrightness",.4,2.5,2]];
+ for(const [id,key,min,max,decimals] of settings){
+  const input=$(id),caption=$(id+"Value");
+  const update=()=>{const value=Math.max(min,Math.min(max,Number(input.value)));s.display[key]=value;caption.textContent=value.toFixed(decimals);persist()};
+  input.value=String(s.display[key]);caption.textContent=Number(s.display[key]).toFixed(decimals);
+  input.addEventListener("input",update);
+ }
+ const spikes=$("starSpikes");spikes.checked=!!s.display.starSpikes;
+ spikes.addEventListener("change",()=>{s.display.starSpikes=spikes.checked;persist()});
 }
 function buildPortraitLayers(){
  const host=$("portraitLayerList");
@@ -470,7 +482,7 @@ function loop(t){
  if(t-displayTime>900){renderClock();displayTime=t}
  requestAnimationFrame(loop);
 }
-buildLayers();buildPortraitLayers();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
+buildLayers();buildPortraitLayers();setupStarAppearance();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
 Promise.resolve(A.loadLines()).catch(console.warn);
 Promise.resolve(A.loadMilkyWay()).catch(console.warn);
 Promise.resolve(A.loadOnlineStars()).then(info=>{
