@@ -19,7 +19,8 @@ s.rate=[1,60,600,3600].includes(Number(s.rate))?Number(s.rate):60;
 s.global.direction=false;s.global.time=false;s.global.coordinates=false;
 // Remove legacy selection labels/highlights on constellations; layer visibility now owns their names.
 for(const c of A.D.constellations){delete s.highlights[c.id];delete s.labels[c.id]}
-s.display={...s.display,starScale:Math.max(1,Math.min(5,Number(s.display?.starScale)||2.3)),starBrightness:Math.max(.4,Math.min(2.5,Number(s.display?.starBrightness)||1.25)),starSpikes:s.display?.starSpikes!==false,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
+if(!s.display?.ipadStarAppearanceV1)s.display={...s.display,starScale:2.3,starBrightness:1.25,starSpikes:true,ipadStarAppearanceV1:true};
+s.display={...s.display,starScale:Math.max(1,Math.min(5,Number(s.display.starScale)||2.3)),starBrightness:Math.max(.4,Math.min(2.5,Number(s.display.starBrightness)||1.25)),starSpikes:s.display.starSpikes!==false,objectTextScale:1.6,constellationTextScale:1.6,hudTextScale:1.4};
 function anchor(){clockAnchor=performance.now();timeAnchor=s.time.getTime()}
 anchor();
 const renderer=window.AstroriumRenderer.createRenderer(canvas,A,{backend:"auto"});
