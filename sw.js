@@ -1,8 +1,8 @@
 /* Nicole the Astrorium — GitHub Pages PWA service worker */
-const CACHE = 'nicole-astrorium-v1.1.0-pages-6-ipad-switch';
+const CACHE = 'nicole-astrorium-v1.1.0-pages-7-ipad-home';
 const CORE = [
   './','./index.html','./presenter.html','./projector.html','./ipad.html',
-  './manifest.webmanifest','./icon-192.png','./icon-512.png','./quick-manual.html','./QUICK-MANUAL.md',
+  './manifest.webmanifest','./ipad.webmanifest','./icon-192.png','./icon-512.png','./quick-manual.html','./QUICK-MANUAL.md',
   './art-image-store.js','./media-library.js','./location-favorites.js','./db-bridge.js',
   './database/db-bundle.js','./assets/art-data.js','./places-offline.js','./pwa-register.js',
   './ipad-app.js','./bootstrap-ipad.js',
