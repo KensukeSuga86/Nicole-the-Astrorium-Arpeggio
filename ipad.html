@@ -186,6 +186,11 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
  <section class="pane active" data-pane="explore">
   <p class="note">星座・恒星・月・惑星・星雲星団を検索します。見つけた天体へ視点が移動します。</p>
   <input class="field" id="query" placeholder="例：オリオン、M31、木星" type="search" autocomplete="off" aria-label="天体名">
+  <div class="section">星座を一覧から探す</div>
+  <p class="note">現在の観測日時・場所で地平線の上にある星座を先に表示します。</p>
+  <select class="field" id="exploreConstellationSelect" aria-label="星座一覧から選択" style="width:100%;min-height:44px"></select>
+  <button class="tile" id="exploreCenterConstellation" style="width:100%;margin-top:7px">選んだ星座へ移動</button>
+  <div class="section">名前で探す</div>
   <div id="results"></div>
  </section>
  <section class="pane" data-pane="themes">
@@ -200,7 +205,15 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   </div>
   <p class="note">「星空めぐり」は約18秒ごとに注目の星座へ移動します。いつでも手動操作で止められます。</p>
  </section>
- <section class="pane" data-pane="layers"><div id="layerList"></div>
+ <section class="pane" data-pane="layers">
+  <div class="section">星の見え方</div>
+  <label for="starSizeLandscape">星の大きさ <output id="starSizeLandscapeValue">2.3</output></label>
+  <input class="field" style="width:100%" type="range" id="starSizeLandscape" min="1" max="5" step=".1" value="2.3">
+  <label for="starBrightnessLandscape">星の明るさ <output id="starBrightnessLandscapeValue">1.25</output></label>
+  <input class="field" style="width:100%" type="range" id="starBrightnessLandscape" min=".4" max="2.5" step=".05" value="1.25">
+  <label class="pLayer" style="display:flex;gap:10px;align-items:center;margin:12px 0"><input type="checkbox" id="starSpikesLandscape" checked><span>明るい星の光条</span></label>
+  <div class="section">表示するもの</div>
+  <div id="layerList"></div>
   <div class="section">星空の拡大率（画角）</div><input type="range" id="fov" min="20" max="150" step="1" value="120"><p class="note" id="fovText"></p>
  </section>
  <section class="pane" data-pane="time">
