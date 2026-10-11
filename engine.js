@@ -115,7 +115,7 @@ async function fetchFirst(urls,type="text"){let last;for(const u of urls){try{co
 function angSep(ra1,dec1,ra2,dec2){const a=ra1*R,b=dec1*R,c=ra2*R,d=dec2*R,q=Math.sin(b)*Math.sin(d)+Math.cos(b)*Math.cos(d)*Math.cos(a-c);return Math.acos(clamp(q,-1,1))/R}
 function bvLabel(bv){if(!Number.isFinite(bv))return"—";if(bv<-.1)return"青白";if(bv<.2)return"青白";if(bv<.45)return"白";if(bv<.75)return"黄白";if(bv<1.0)return"黄";if(bv<1.4)return"橙";return"赤橙"}
 function enrichNamedStarColors(){if(!ONLINE_STARS.length)return;for(const st of D.stars){if(st.display_color_hex||Number.isFinite(Number(st.bv)))continue;let best=null,bd=1e9;for(const x of ONLINE_STARS){if(!Number.isFinite(x.bv))continue;const d=angSep(st.ra,st.dec,x.ra,x.dec);if(d<bd){bd=d;best=x}}if(best&&bd<.12){st.bv=best.bv;st.colorLabel=bvLabel(best.bv)}}}
-async async function loadLines(){
+async function loadLines(){
  const standardReady=Object.keys(STANDARD_LINES).length===88;
  const cached=cacheGet(LINE_CACHE);
  const builtInCount=Object.keys(DB_LINE_STARS).length;
