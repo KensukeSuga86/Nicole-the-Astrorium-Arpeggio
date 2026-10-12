@@ -132,6 +132,44 @@ $("cardClose").onclick=()=>hideCard();
 function hideCard(){$("objectCard").classList.remove("show")}
 
 // Use the persistent bottom console for all routine iPad operations.
+// Drag the separator, or use keyboard arrows, without stealing gestures from the sky.
+function setupResizableConsole(){
+ const grip=$("consoleResize"),key="astrorium-ipad-sky-split-v1";
+ const portrait=()=>window.matchMedia("(orientation: portrait)").matches;
+ const limits=()=>portrait()?[38,80]:[30,78];
+ let values={portrait:66.666667,landscape:64};
+ try{const saved=JSON.parse(localStorage.getItem(key)||"{}");for(const k of ["portrait","landscape"])if(Number.isFinite(Number(saved[k])))values[k]=Number(saved[k])}catch(_){}
+ const mode=()=>portrait()?"portrait":"landscape";
+ function apply(pct,save=false){
+  const [low,high]=limits(),n=clamp(pct,low,high),k=mode();values[k]=n;
+  document.documentElement.style.setProperty("--ipad-sky-height",n+"dvh");
+  grip.setAttribute("aria-valuemin",String(low));grip.setAttribute("aria-valuemax",String(high));
+  grip.setAttribute("aria-valuenow",String(Math.round(n)));grip.setAttribute("aria-valuetext","星空 "+Math.round(n)+"%、メニュー "+Math.round(100-n)+"%");
+  if(save)try{localStorage.setItem(key,JSON.stringify(values))}catch(_){}
+ }
+ let dragging=null;
+ grip.addEventListener("pointerdown",e=>{
+  if(e.pointerType==="mouse"&&e.button!==0)return;
+  e.preventDefault();dragging=e.pointerId;grip.classList.add("dragging");
+  try{grip.setPointerCapture(e.pointerId)}catch(_){}
+ });
+ grip.addEventListener("pointermove",e=>{
+  if(e.pointerId!==dragging)return;
+  e.preventDefault();apply(e.clientY/Math.max(1,window.innerHeight)*100);
+ });
+ const finish=e=>{if(e.pointerId!==dragging)return;dragging=null;grip.classList.remove("dragging");apply(values[mode()],true)};
+ grip.addEventListener("pointerup",finish);grip.addEventListener("pointercancel",finish);
+ grip.addEventListener("keydown",e=>{
+  const delta=e.key==="ArrowUp"?-2:e.key==="ArrowDown"?2:e.key==="PageUp"?-10:e.key==="PageDown"?10:0;
+  if(!delta&&e.key!=="Home"&&e.key!=="End")return;
+  e.preventDefault();const [low,high]=limits();
+  apply(e.key==="Home"?low:e.key==="End"?high:values[mode()]+delta,true);
+ });
+ const orient=window.matchMedia("(orientation: portrait)");
+ orient.addEventListener?.("change",()=>apply(values[mode()]));
+ window.addEventListener("resize",()=>apply(values[mode()]));
+ apply(values[mode()]);
+}
 function installBottomConsole(){
  for(const name of ["explore","time","data"]){
   const source=document.querySelector('[data-pane="'+name+'"]');
@@ -506,7 +544,7 @@ function loop(t){
  if(t-displayTime>900){renderClock();displayTime=t}
  requestAnimationFrame(loop);
 }
-installBottomConsole();buildLayers();buildPortraitLayers();setupStarAppearance();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
+setupResizableConsole();installBottomConsole();buildLayers();buildPortraitLayers();setupStarAppearance();initConstellationPicker();syncLayers();syncPlace();renderClock();search("");
 Promise.resolve(A.loadLines()).then(info=>{
  let total=0,ready=0;
  for(const c of A.D.constellations)for(const [a,b] of A.constellationSegments(c.abbr,s)){
