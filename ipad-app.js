@@ -62,6 +62,7 @@ const layers=[
  ["moon","月"],["sun","太陽"],["daylight","昼光と薄明"],["moonlight","月明かり"],
  ["milkyWay","天の川"],["naturalDeepSky","星雲・星団"],["lines","星座線"],
  ["names","星座名"],["arts","星座絵"],["asterisms","アステリズム"],
+ ["altazGrid","高度・方位線"],["radecGrid","赤経・赤緯線"],
  ["sporadicMeteors","散在流星"],["aurora","オーロラ"],["scintillation","瞬き"]
 ];
 function buildLayers(){
@@ -430,6 +431,32 @@ $("useGps").onclick=()=>{
   syncPlace();renderClock();refreshConstellationPicker();persist();notice("現在地に移動しました");
  },()=>notice("位置情報を取得できませんでした"),{enableHighAccuracy:false,timeout:12000,maximumAge:120000});
 };
+const favorites=window.AstroriumLocationFavorites;
+function refreshFavorites(selected=""){
+ const select=$("favoritePlaceSelect");select.replaceChildren();
+ const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="お気に入り地点を選択";select.append(placeholder);
+ for(const place of favorites?.list()||[]){
+  const option=document.createElement("option");option.value=place.id;option.textContent=place.name+"（"+place.lat.toFixed(3)+"°, "+place.lon.toFixed(3)+"°）";select.append(option);
+ }
+ select.value=selected;
+}
+$("saveFavoritePlace").onclick=()=>{
+ if(!favorites){notice("お気に入り地点を利用できません");return}
+ const name=(s.location.name||"観測地").trim();
+ try{const saved=favorites.save({name,lat:s.location.lat,lon:s.location.lon,alt:s.location.alt||0});refreshFavorites(saved.id);notice(name+"をお気に入りに登録しました")}catch(error){notice("登録できません："+error.message)}
+};
+$("applyFavoritePlace").onclick=()=>{
+ const id=$("favoritePlaceSelect").value,place=favorites?.get(id);if(!place){notice("お気に入り地点を選んでください");return}
+ A.command(s,{type:"location",value:{name:place.name,lat:place.lat,lon:place.lon,alt:place.alt}});
+ syncPlace();renderClock();refreshConstellationPicker();persist();notice(place.name+"へ移動しました");
+};
+$("removeFavoritePlace").onclick=()=>{
+ const id=$("favoritePlaceSelect").value,place=favorites?.get(id);if(!place){notice("削除する地点を選んでください");return}
+ if(!window.confirm("「"+place.name+"」をお気に入りから削除しますか？"))return;
+ try{favorites.remove(id);refreshFavorites();notice("お気に入りから削除しました")}catch(error){notice("削除できません："+error.message)}
+};
+window.addEventListener("astrorium-favorites-changed",()=>refreshFavorites($("favoritePlaceSelect").value));
+refreshFavorites();
 $("pickStarCatalog").onclick=()=>$("starFile").click();
 $("starFile").onchange=async()=>{
  const file=$("starFile").files?.[0];if(!file)return;
