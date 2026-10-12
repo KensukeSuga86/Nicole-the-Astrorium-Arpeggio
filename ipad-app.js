@@ -251,7 +251,8 @@ function syncConstellationControls(){
   const key=button.dataset.constToggle;
   const enabled=!!(id&&A.effectiveConst(s,id,key));
   button.setAttribute("aria-pressed",String(enabled));
-  button.textContent=constToggleLabels[key]+" "+(enabled?"ON":"OFF");
+  button.textContent=constToggleLabels[key]+" "+(enabled?"OFF":"ON");
+  button.setAttribute("aria-label",constToggleLabels[key]+"を"+(enabled?"非表示にする":"表示する"));
   button.disabled=!id;
  });
  if(id){$("portraitConstellationSelect").value=id;$("exploreConstellationSelect").value=id;}
