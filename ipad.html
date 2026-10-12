@@ -125,6 +125,16 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
 #portraitOpenSearch{display:none}
 @media (orientation:portrait){#sky,#veil{height:66.666667dvh}#portraitConsole{top:66.666667dvh}#notice{bottom:calc(33.333333dvh + 12px)}}
 @media (orientation:landscape){#portraitConsole .pLayers{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* Adjustable sky/console split: maintain independent portrait and landscape sizes. */
+:root{--ipad-sky-height:64dvh}
+#sky,#veil{height:var(--ipad-sky-height)!important}
+#portraitConsole{top:var(--ipad-sky-height)!important}
+#notice{bottom:calc(100dvh - var(--ipad-sky-height) + 10px)!important}
+#consoleResize{position:absolute;left:0;right:0;top:-15px;height:29px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:ns-resize;z-index:8;user-select:none;-webkit-user-select:none;background:transparent}
+#consoleResize .resizeGrip{width:70px;height:5px;border-radius:999px;background:rgba(227,235,246,.78);box-shadow:0 0 0 5px rgba(12,27,47,.35)}
+#consoleResize:focus-visible .resizeGrip,#consoleResize.dragging .resizeGrip{background:#ffe4a7;box-shadow:0 0 0 6px rgba(218,179,97,.22)}
+@media(orientation:portrait){:root{--ipad-sky-height:66.666667dvh}}
 </style>
 </head>
 <body>
@@ -145,6 +155,7 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
 <button class="relatedConstellation" id="objectConstellationJump" hidden>所属する星座を見る</button>
 </aside>
 <section id="portraitConsole" aria-label="iPadプラネタリウムコンソール">
+ <div id="consoleResize" role="separator" aria-label="星空とメニューの高さを調整" aria-orientation="horizontal" aria-valuemin="30" aria-valuemax="80" aria-valuenow="67" tabindex="0"><span class="resizeGrip" aria-hidden="true"></span></div>
  <div class="pHead"><nav class="pTabs" aria-label="コンソールの表示">
   <button class="pTab active" data-portrait-tab="guide" aria-pressed="true">案内</button>
   <button class="pTab" data-portrait-tab="constellations" aria-pressed="false">星座</button>
