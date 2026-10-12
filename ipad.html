@@ -258,6 +258,14 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
    <label>経度<input class="field" type="number" id="lon" step=".0001" min="-180" max="180"></label>
   </div>
   <div class="grid2" style="margin-top:8px"><button class="tile" id="applyLocation">地点を変更</button><button class="tile" id="useGps">現在地を使う</button></div>
+  <div class="section">お気に入り地点</div>
+  <select class="field" id="favoritePlaceSelect" aria-label="お気に入り地点を選択"><option value="">お気に入り地点を選択</option></select>
+  <div class="grid3" style="margin-top:8px">
+   <button class="tile" id="saveFavoritePlace">現在の地点を登録</button>
+   <button class="tile" id="applyFavoritePlace">選んだ地点へ移動</button>
+   <button class="tile" id="removeFavoritePlace">登録を削除</button>
+  </div>
+  <p class="note">地点名・緯度・経度を端末に保存します。PC版と同じブラウザ保存領域を利用します。</p>
   <p class="note">緯度・経度の入力はオフラインでも利用できます。現在地取得には位置情報の許可が必要です。</p>
  </section>
  <section class="pane" data-pane="data">
@@ -281,6 +289,7 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
 <script src="./database/db-bundle.js"></script>
 <script src="./assets/art-data.js"></script>
 <script src="./places-offline.js"></script>
+<script src="./location-favorites.js"></script>
 <script src="./database-bootstrap.js"></script>
 <script src="./bootstrap-ipad.js"></script>
 <script src="./pwa-register.js"></script>
