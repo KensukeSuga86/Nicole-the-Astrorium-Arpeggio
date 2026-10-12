@@ -15,7 +15,7 @@ try{
  else{const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);if(sunset)s.time=new Date(sunset.getTime()+45*60000)}
 }catch(e){console.warn("iPad state restore skipped",e);s=A.makeState()}
 s.running=!!s.running;
-s.rate=[1,60,600,3600].includes(Number(s.rate))?Number(s.rate):60;
+s.rate=Number.isFinite(Number(s.rate))&&Number(s.rate)>=.1&&Number(s.rate)<=86400?Number(s.rate):60;
 s.global.direction=false;s.global.time=false;s.global.coordinates=false;
 // Remove legacy selection labels/highlights on constellations; layer visibility now owns their names.
 for(const c of A.D.constellations){delete s.highlights[c.id];delete s.labels[c.id]}
@@ -399,10 +399,19 @@ $("jumpSunset").onclick=()=>{
  const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);
  if(sunset)setTime(sunset);else notice("この日の日の入りは計算できません");
 };
-$("speed").value=String(s.rate);
-$("speed").onchange=()=>{
- s.rate=Number($("speed").value)||60;anchor();persist();
-};
+function syncSpeedControls(){
+ const presets=["0.1","1","10","60","300","600","3600","86400"];
+ $("speed").value=presets.includes(String(s.rate))?String(s.rate):"custom";
+ if(document.activeElement!==$("customSpeed"))$("customSpeed").value=String(s.rate);
+}
+function updateSpeed(raw){
+ const rate=Number(raw);
+ if(!Number.isFinite(rate)||rate<.1||rate>86400){notice("速度は0.1〜86400倍の範囲で指定してください");syncSpeedControls();return}
+ anchor();s.rate=rate;syncSpeedControls();persist();
+}
+$("speed").onchange=()=>{if($("speed").value==="custom"){$("customSpeed").focus();return}updateSpeed($("speed").value)};
+$("customSpeed").onchange=()=>updateSpeed($("customSpeed").value);
+syncSpeedControls();
 function syncPlace(){
  $("placeName").value=s.location.name||"";
  $("lat").value=String(s.location.lat);$("lon").value=String(s.location.lon);
