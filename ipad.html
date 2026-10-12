@@ -189,6 +189,9 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
  <div class="pPage" data-portrait-page="time"></div>
  <div class="pPage" data-portrait-page="data"></div>
  <div class="pPage" data-portrait-page="layers">
+  <div class="section">表示するもの</div>
+  <div class="pLayers" id="portraitLayerList"></div>
+
   <div class="section">星の見え方</div>
   <label for="starSize">星の大きさ <output id="starSizeValue">2.3</output></label>
   <input class="field" style="width:100%" type="range" id="starSize" min="1" max="12" step=".1" value="2.3">
@@ -196,8 +199,6 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   <input class="field" style="width:100%" type="range" id="starBrightness" min=".4" max="4" step=".05" value="1.25">
   <label class="pLayer"><input type="checkbox" id="starSpikes" checked><span>明るい星の光条（1等星以上）</span></label>
   <p class="note">iPad版だけの表示設定です。光条は視認性を高める演出で、肉眼の星の姿を厳密に再現するものではありません。</p>
-  <div class="section">表示するもの</div>
-  <div class="pLayers" id="portraitLayerList"></div>
  </div>
 </section>
 <footer class="chrome" id="footer"><div class="glass controls">
@@ -231,22 +232,25 @@ input[type=range]{accent-color:#e4c581;width:100%;min-height:32px}
   <p class="note" id="lineStatus" role="status">星座線データを確認中…</p>
  </section>
  <section class="pane" data-pane="layers">
+  <div class="section">表示するもの</div>
+  <div id="layerList"></div>
+  <div class="section">星空の拡大率（画角）</div><input type="range" id="fov" min="20" max="150" step="1" value="120"><p class="note" id="fovText"></p>
+
   <div class="section">星の見え方</div>
   <label for="starSizeLandscape">星の大きさ <output id="starSizeLandscapeValue">2.3</output></label>
   <input class="field" style="width:100%" type="range" id="starSizeLandscape" min="1" max="12" step=".1" value="2.3">
   <label for="starBrightnessLandscape">星の明るさ <output id="starBrightnessLandscapeValue">1.25</output></label>
   <input class="field" style="width:100%" type="range" id="starBrightnessLandscape" min=".4" max="4" step=".05" value="1.25">
   <label class="pLayer" style="display:flex;gap:10px;align-items:center;margin:12px 0"><input type="checkbox" id="starSpikesLandscape" checked><span>明るい星の光条</span></label>
-  <div class="section">表示するもの</div>
-  <div id="layerList"></div>
-  <div class="section">星空の拡大率（画角）</div><input type="range" id="fov" min="20" max="150" step="1" value="120"><p class="note" id="fovText"></p>
  </section>
  <section class="pane" data-pane="time">
   <div class="section">日時</div>
   <input class="field" id="dateTime" type="datetime-local">
   <div class="grid3" style="margin-top:9px"><button class="tile" id="prevDay">前日</button><button class="tile" id="nextDay">翌日</button><button class="tile" id="jumpSunset">日の入り</button></div>
   <div class="section">時間の流れる速度</div>
-  <select class="field" id="speed"><option value="1">等速（1倍）</option><option value="60" selected>60倍</option><option value="600">600倍</option><option value="3600">3600倍</option></select>
+  <select class="field" id="speed" aria-label="時間の進行速度"><option value="0.1">0.1倍（ゆっくり）</option><option value="1">1倍（実時間）</option><option value="10">10倍</option><option value="60" selected>60倍</option><option value="300">300倍</option><option value="600">600倍</option><option value="3600">3600倍（1秒で1時間）</option><option value="86400">86400倍（1秒で1日）</option><option value="custom">任意の速度…</option></select>
+  <label for="customSpeed">速度を直接指定（0.1〜86400倍）</label><input class="field" type="number" id="customSpeed" min="0.1" max="86400" step="any" inputmode="decimal" value="60">
+  <p class="note">再生ボタンで時間を進めます。選んだ速度は次回起動時も引き継ぎます。</p>
   <div class="section">観測地点</div>
   <input class="field" id="placeName" placeholder="地点名" aria-label="地点名">
   <div class="grid2" style="margin-top:7px">

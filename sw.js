@@ -1,5 +1,5 @@
 /* Nicole the Astrorium — GitHub Pages PWA service worker */
-const CACHE = 'nicole-astrorium-v1.1.0-pages-12-ipad-resize';
+const CACHE = 'nicole-astrorium-v1.1.0-pages-13-ipad-time-controls';
 const CORE = [
   './','./index.html','./presenter.html','./projector.html','./ipad.html',
   './manifest.webmanifest','./ipad.webmanifest','./icon-192.png','./icon-512.png','./quick-manual.html','./QUICK-MANUAL.md',
