@@ -257,6 +257,12 @@ function syncConstellationControls(){
  });
  if(id){$("portraitConstellationSelect").value=id;$("exploreConstellationSelect").value=id;}
 }
+$("clearGuideConstellations").onclick=()=>{
+ for(const c of A.D.constellations){
+  for(const key of ["line","art","name"])A.command(s,{type:"const",id:c.id,key,value:false});
+ }
+ syncConstellationControls();persist();notice("星座線・星座絵・星座名の個別表示を一括で消しました");
+};
 function toggleIndividualConstellation(key){
  if(!activeConstellationId||!constToggleLabels[key])return;
  const enabled=A.effectiveConst(s,activeConstellationId,key);
@@ -414,6 +420,43 @@ function updateSpeed(raw){
 $("speed").onchange=()=>{if($("speed").value==="custom"){$("customSpeed").focus();return}updateSpeed($("speed").value)};
 $("customSpeed").onchange=()=>updateSpeed($("customSpeed").value);
 syncSpeedControls();
+// Offline favorites/cities first, optional one-shot online geocoding for other towns.
+const placeSearchCache=new Map();
+function showPlaceMatches(items){
+ const host=$("placeSearchResults");host.replaceChildren();
+ if(!items.length){const p=document.createElement("p");p.className="note";p.textContent="該当する地名が見つかりませんでした";host.append(p);return}
+ for(const place of items.slice(0,8)){
+  const b=document.createElement("button");b.type="button";b.className="result";
+  b.style.width="100%";b.textContent=place.name+"（"+place.lat.toFixed(4)+", "+place.lon.toFixed(4)+"）";
+  b.onclick=()=>{$("placeName").value=place.name;$("lat").value=String(place.lat);$("lon").value=String(place.lon);host.replaceChildren();notice("座標を入力しました。「地点を変更」で反映できます")};
+  host.append(b);
+ }
+}
+let placeSearchBusy=false;
+$("searchPlace").onclick=async()=>{
+ const q=$("placeSearch").value.trim(),host=$("placeSearchResults");
+ if(!q)return notice("検索する地名を入力してください");
+ if(placeSearchBusy)return;
+ const normalized=q.toLocaleLowerCase().normalize("NFKC");
+ const local=(window.NICOLE_PLACES||[]).filter(p=>(p.name+" "+(p.en||"")).toLocaleLowerCase().normalize("NFKC").includes(normalized))
+  .map(p=>({name:p.name,lat:Number(p.lat),lon:Number(p.lon)})).slice(0,8);
+ if(local.length){showPlaceMatches(local);return}
+ if(placeSearchCache.has(normalized)){showPlaceMatches(placeSearchCache.get(normalized));return}
+ placeSearchBusy=true;$("searchPlace").disabled=true;host.textContent="地名を検索中…";
+ try{
+  const url="https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=8&language=ja&format=json";
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),9000);
+  let response;
+  try{response=await fetch(url,{signal:controller.signal})}finally{clearTimeout(timer)}
+  if(!response.ok)throw Error("HTTP "+response.status);
+  const json=await response.json();
+  const matches=(json.results||[]).filter(p=>Number.isFinite(p.latitude)&&Number.isFinite(p.longitude))
+   .map(p=>({name:[p.name,p.admin1,p.country].filter(Boolean).join(" / "),lat:p.latitude,lon:p.longitude}));
+  placeSearchCache.set(normalized,matches);showPlaceMatches(matches);
+ }catch(error){host.textContent="オンライン検索に失敗しました。通信を確認するか、緯度・経度を直接入力してください"}
+ finally{placeSearchBusy=false;$("searchPlace").disabled=false}
+};
+$("placeSearch").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("searchPlace").click()}});
 function syncPlace(){
  $("placeName").value=s.location.name||"";
  $("lat").value=String(s.location.lat);$("lon").value=String(s.location.lon);
