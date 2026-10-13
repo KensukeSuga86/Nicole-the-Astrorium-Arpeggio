@@ -261,7 +261,7 @@ $("clearGuideConstellations").onclick=()=>{
  for(const c of A.D.constellations){
   for(const key of ["line","art","name"])A.command(s,{type:"const",id:c.id,key,value:false});
  }
- syncConstellationControls();persist();notice("星座線・星座絵・星座名の個別表示を一括で消しました");
+ syncConstellationControls();persist();
 };
 function toggleIndividualConstellation(key){
  if(!activeConstellationId||!constToggleLabels[key])return;
