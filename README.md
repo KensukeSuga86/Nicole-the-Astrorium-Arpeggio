@@ -1,4 +1,4 @@
-# Nicole the Astrorium Arpeggio v1.1.0
+# Nicole the Astrorium Arpeggio v1.1.1
 
 旧称：Nicole the Astrorium for Chrome。PC用のオフラインPresenter/ProjectorとiPad用の一画面モードを備えています。
 
@@ -19,6 +19,13 @@ iPad版では、星空を一本指でドラッグ、二本指でピンチズー�
 - **Windows**: `START-Windows.bat` をダブルクリック（または `index.html` をChromeで開く）
 - **Mac**: `START-Mac.command` をダブルクリック（初回は control+クリック →「開く」）。または `index.html` をChromeで開く
 - どちらも **Google Chrome** が対象。ZIPは展開してから使うこと。
+
+## v1.1.1 の変更点
+- 同梱の共通天文DBを **Nicole Astronomy Database v0.4.0** に更新（`database/db-bundle.js` と `database/data/` を差し替え）。
+  - 278天体（星座88・恒星64・惑星7・深宇宙119）の解説を拡充（概要・物語・天文学的な見どころ・最新の観測・神話・観測のポイント・歴史）。
+  - へび座・へびつかい座の星座線を星を共有する形に修正（全722線分）、へび座の星座絵の配置を更新。
+- 表示上の版を v1.1.1 に、Service Worker のキャッシュ名を更新（インストール済みPWAも新しいDBに入れ替わる）。
+- 画面・操作・Presenter–Projector通信（SceneState v2 / `astrorium-live-v0150`）は変更なし。
 
 ## v1.1.0 の変更点
 - **オーロラ表現を全面刷新**: 高度約100kmの「光のカーテン」を物理モデルで遠近投影。数百本の光線が磁気天頂へ収束し、下端が鋭く明るい、本物の見え方に。

@@ -37,7 +37,7 @@ iPad版では「データ」タブからPC版へ切り替え可能。PC版では
 ## タップ案内・個別の星座表示
 
 - 星空をタップすると、近くの恒星・月・惑星・星雲星団などの案内を表示。星座代表位置だけでなく、星座線の近くをタップしても星座を選択できる。
-- 案内文は同梱Nicole Astronomy Database v0.3.3を利用。星座には天文学の説明と神話・由来を表示できる。
+- 案内文は同梱Nicole Astronomy Database v0.4.0を利用。星座には天文学の説明と神話・由来を表示できる。
 - **星座の案内から星座線・星座絵・星座名をそれぞれ個別にON/OFF**。グローバル設定と個別設定を区別して保持する。
 - 恒星・Deep Skyに所属星座の情報があるときは「○○座の案内を見る」から星座へ移動できる。
 - 縦向きコンソールの「星座」タブから88星座を選んで、個別表示を切り替えることもできる。
@@ -51,7 +51,7 @@ iPad版では「データ」タブからPC版へ切り替え可能。PC版では
 
 ## データとオフライン利用
 
-- Nicole Astronomy Database v0.3.3を既存の database/db-bundle.js から読込
+- Nicole Astronomy Database v0.4.0を既存の database/db-bundle.js から読込
 - 既存の engine.js、renderer-adapter.js、scene-state.js、星座絵バンドルを再利用
 - iPadの日時・場所・レイヤー選択は localStorage の astrorium-ipad-mode-v1 に保存
 - 約8等星を表示するには、stars.8.json を「データ」から取り込む。端末のIndexedDBへ保存

@@ -1,5 +1,7 @@
 # Nicole Astronomy Database integration — Nicole the Astrorium v0.15.5
 
+> **Arpeggio v1.1.1 以降の同梱DBは Nicole Astronomy Database v0.4.0 です**（`database/db-bundle.js`、LOCAL-first、自動では新版に切り替えません）。以下は v0.15.5 時点の記録です。
+
 Nicole the Astrorium v0.15.5 is **LOCAL-first** and bundles the consumer data subset of **Nicole Astronomy Database v0.3.3**.
 
 ## Ownership rule

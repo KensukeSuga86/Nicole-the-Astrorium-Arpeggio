@@ -130,7 +130,7 @@ async function loadLines(){
    const raw=await fetchFirst(STARLINE_URLS),coordinates=parseLineStars(raw);
    if(Object.keys(coordinates).length<650)throw Error("同梱星座線座標が不完全です");
    WSTARS={...coordinates,...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=true;
-   cacheSet(LINE_CACHE,{s:coordinates,standardVersion:"0.3.3-offline"});
+   cacheSet(LINE_CACHE,{s:coordinates,standardVersion:"0.4.0-offline"});
    return {full:true,standard:true,coordinates:Object.keys(WSTARS).length,cached:false};
   }catch(error){
    WSTARS={...DB_LINE_STARS};WLINES={...STANDARD_LINES};FULL_LINES=false;
