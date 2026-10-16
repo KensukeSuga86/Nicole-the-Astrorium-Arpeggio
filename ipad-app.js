@@ -55,7 +55,17 @@ function advance(ms){setTime(new Date(s.time.getTime()+ms))}
 function setRunning(value){s.running=!!value;anchor();renderClock();persist()}
 function cameraPatch(patch){A.command(s,{type:"camera",value:patch});renderClock();persist()}
 function changeLayer(key,on){
- s.global[key]=on;persist();syncLayers();
+ s.global[key]=on;
+ // Global constellation visibility must clear per-constellation overrides.
+ // Otherwise a prior "clear all" (or an individual OFF) keeps each item hidden
+ // even when the corresponding control in Display is switched back ON.
+ if(key==="lines"||key==="arts"||key==="names"){
+  for(const c of A.D.constellations){
+   const state=s.constellations[c.id];
+   if(state)state[key==="lines"?"line":key==="arts"?"art":"name"]=null;
+  }
+ }
+ persist();syncLayers();
 }
 const layers=[
  ["stars","恒星"],["starNames","星の名前"],["planets","惑星"],["planetNames","惑星名"],
