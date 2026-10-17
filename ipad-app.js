@@ -54,8 +54,17 @@ function setTime(date){
 function advance(ms){setTime(new Date(s.time.getTime()+ms))}
 function setRunning(value){s.running=!!value;anchor();renderClock();persist()}
 function cameraPatch(patch){A.command(s,{type:"camera",value:patch});renderClock();persist()}
+const CONST_LAYER_KEYS={lines:"line",names:"name",arts:"art"};
+// Individual (guide) settings override the global layer, so a global switch must clear them to take effect.
+function resetConstOverrides(layerKeys){
+ for(const layerKey of layerKeys){
+  const key=CONST_LAYER_KEYS[layerKey];if(!key)continue;
+  for(const c of A.D.constellations)A.command(s,{type:"const",id:c.id,key,value:null});
+ }
+}
 function changeLayer(key,on){
- s.global[key]=on;persist();syncLayers();
+ s.global[key]=on;resetConstOverrides([key]);persist();syncLayers();
+ syncConstellationControls();
 }
 const layers=[
  ["stars","恒星"],["starNames","星の名前"],["planets","惑星"],["planetNames","惑星名"],
@@ -259,7 +268,7 @@ function syncConstellationControls(){
 }
 $("clearGuideConstellations").onclick=()=>{
  for(const c of A.D.constellations){
-  for(const key of ["line","art","name"])A.command(s,{type:"const",id:c.id,key,value:false});
+  for(const key of ["line","art","name"])A.command(s,{type:"const",id:c.id,key,value:null});
  }
  syncConstellationControls();persist();
 };
@@ -360,7 +369,7 @@ function setTheme(name){
   const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);
   if(sunset)setTime(new Date(sunset.getTime()+60*60000));
   s.global.stars=true;s.global.milkyWay=true;s.global.naturalDeepSky=true;
-  s.global.lines=name==="constellations";s.global.names=name==="constellations";s.global.arts=name==="constellations";
+  s.global.lines=name==="constellations";s.global.names=name==="constellations";s.global.arts=name==="constellations";resetConstOverrides(["lines","names","arts"]);
   cameraPatch({az:name==="milkyway"?195:180,alt:name==="milkyway"?45:50,fov:name==="constellations"?95:115});
   if(name==="constellations")A.centerOn(s,"Cyg");
  }else if(name==="moon"){
@@ -386,7 +395,7 @@ function nextTour(){
 function startTour(){
  const sunset=A.sunsetForDate(s.time,s.location.lat,s.location.lon);
  if(sunset)setTime(new Date(sunset.getTime()+75*60000));
- s.global.lines=true;s.global.arts=true;s.global.names=true;syncLayers();
+ s.global.lines=true;s.global.arts=true;s.global.names=true;resetConstOverrides(["lines","names","arts"]);syncLayers();
  tourIndex=0;nextTour();tourTimer=setInterval(nextTour,18000);
  notice("星空めぐりを開始しました");
 }

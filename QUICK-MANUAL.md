@@ -1,6 +1,6 @@
 # Nicole the Astrorium 簡易使い方マニュアル
 
-対象：Nicole the Astrorium Arpeggio / GitHub Pages v1.1.1
+対象：Nicole the Astrorium Arpeggio / GitHub Pages v1.1.2
 
 ## 1. 起動
 

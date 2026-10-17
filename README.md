@@ -1,4 +1,4 @@
-# Nicole the Astrorium Arpeggio v1.1.1
+# Nicole the Astrorium Arpeggio v1.1.2
 
 旧称：Nicole the Astrorium for Chrome。PC用のオフラインPresenter/ProjectorとiPad用の一画面モードを備えています。
 
@@ -19,6 +19,16 @@ iPad版では、星空を一本指でドラッグ、二本指でピンチズー�
 - **Windows**: `START-Windows.bat` をダブルクリック（または `index.html` をChromeで開く）
 - **Mac**: `START-Mac.command` をダブルクリック（初回は control+クリック →「開く」）。または `index.html` をChromeで開く
 - どちらも **Google Chrome** が対象。ZIPは展開してから使うこと。
+
+## v1.1.2 の変更点
+- **iPadモードの不具合修正**: 「案内表示を一括消去」の後、表示タブの星座線・星座絵・星座名のON/OFFが効かなくなっていた問題を修正。
+  - 一括消去は、案内で個別にON/OFFした設定を取り消し、表示タブの設定に従う状態に戻すようにした。
+  - 表示タブの星座線・星座絵・星座名を切り替えると、その種類の個別設定を取り消して表示タブの設定を優先する（旧版で一括消去した状態が保存されていても、切り替えれば直る）。テーマ「星座」と「星空めぐり」も同様。
+  - 表示タブでOFFにすると、案内で個別に表示していた星座のその種類も消える。
+- `version.json` の `name` を旧称「Nicole the Astrorium for Chrome」から「Nicole the Astrorium Arpeggio」に変更。簡易マニュアルの対象表記も同様。
+- 表示上の版を v1.1.2 に、Service Worker のキャッシュ名を更新。
+- PC用Presenter/Projectorの画面・操作・通信（SceneState v2 / `astrorium-live-v0150`）は変更なし。
+- 確認はローカル配信のChromium（iPadサイズ 820×1180）のみ。**iPad実機は未確認**。
 
 ## v1.1.1 の変更点
 - 同梱の共通天文DBを **Nicole Astronomy Database v0.4.0** に更新（`database/db-bundle.js` と `database/data/` を差し替え）。
