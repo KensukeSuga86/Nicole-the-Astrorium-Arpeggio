@@ -1,5 +1,5 @@
 /* Nicole the Astrorium — GitHub Pages PWA service worker */
-const CACHE = 'nicole-astrorium-v1.1.2-pages-20-db-0.4.0';
+const CACHE = 'nicole-astrorium-v1.1.3-pages-21-db-0.4.0';
 const CORE = [
   './','./index.html','./presenter.html','./projector.html','./ipad.html',
   './manifest.webmanifest','./ipad.webmanifest','./icon-192.png','./icon-512.png','./quick-manual.html','./QUICK-MANUAL.md',
@@ -11,7 +11,9 @@ const CORE = [
   './scene-state.js','./data-fallback.js','./constellation-art.js'
 ];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(()=>self.skipWaiting()));
+  // cache:'reload' — fetch from the network, not the HTTP cache (GitHub Pages: max-age=600), so a new
+  // version never stores a stale copy of a file under its new cache name.
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE.map(u => new Request(u, {cache: 'reload'})))).then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k.startsWith('nicole-astrorium-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
