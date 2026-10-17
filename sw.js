@@ -1,5 +1,5 @@
 /* Nicole the Astrorium — GitHub Pages PWA service worker */
-const CACHE = 'nicole-astrorium-v1.1.1-pages-18-db-0.4.0';
+const CACHE = 'nicole-astrorium-v1.1.1-pages-19-db-0.4.0';
 const CORE = [
   './','./index.html','./presenter.html','./projector.html','./ipad.html',
   './manifest.webmanifest','./ipad.webmanifest','./icon-192.png','./icon-512.png','./quick-manual.html','./QUICK-MANUAL.md',
