@@ -1,4 +1,4 @@
-# Nicole the Astrorium Arpeggio v1.1.3
+# Nicole the Astrorium Arpeggio v1.1.4
 
 旧称：Nicole the Astrorium for Chrome。PC用のオフラインPresenter/ProjectorとiPad用の一画面モードを備えています。
 
@@ -19,6 +19,10 @@ iPad版では、星空を一本指でドラッグ、二本指でピンチズー�
 - **Windows**: `START-Windows.bat` をダブルクリック（または `index.html` をChromeで開く）
 - **Mac**: `START-Mac.command` をダブルクリック（初回は control+クリック →「開く」）。または `index.html` をChromeで開く
 - どちらも **Google Chrome** が対象。ZIPは展開してから使うこと。
+
+## v1.1.4 の変更点
+- **アイコンを新しくした**：Nicole the Astrorium のアプリ版（v2 系・青）や v1 系（緑）と見分けやすいよう、紫の空に、両端に恒星球のあるダンベル形の投影機を描いたアイコンにした（`icon-180.png`・`icon-192.png`・`icon-512.png`・`nicole2_icon.png`）。
+- 表示上の版を v1.1.4 に、Service Worker のキャッシュ名を更新（インストール済みの PWA も新しいアイコンを取り直す）。
 
 ## v1.1.3 の変更点
 - **PC版「アプリを終了」の改善**: ブラウザは、スクリプトで開いたウィンドウ以外のタブをページ側から閉じることを許さないため、ブックマークや既存のタブから開いた解説員画面は「アプリを終了」を押しても閉じなかった。
